@@ -1,17 +1,15 @@
 import jwt
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from clerk_backend_api import Clerk
+import httpx
 from .config import settings
 from .schemas import UserCreate
 from .crud import create_user, get_user_by_clerk_id
 from .database import get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
-import httpx
 
 security = HTTPBearer()
-clerk = Clerk(bearer_auth=settings.clerk_secret_key)
 
 
 async def verify_token(
@@ -21,52 +19,62 @@ async def verify_token(
     try:
         token = credentials.credentials
 
-        # Verify the JWT token with Clerk
-        # First, get the JWKS from Clerk to verify the token
+        # Verify the JWT token with Clerk by calling their verify endpoint
         async with httpx.AsyncClient() as client:
-            jwks_response = await client.get(f"https://clerk.{settings.clerk_publishable_key.split('_')[2]}.lcl.dev/.well-known/jwks.json")
-            if jwks_response.status_code != 200:
-                # Fallback to generic endpoint
-                jwks_response = await client.get("https://api.clerk.com/v1/jwks")
+            verify_response = await client.get(
+                f"https://api.clerk.com/v1/sessions/{token}/verify",
+                headers={
+                    "Authorization": f"Bearer {settings.clerk_secret_key}",
+                    "Content-Type": "application/json"
+                }
+            )
 
-            if jwks_response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Could not verify token")
+            if verify_response.status_code == 200:
+                session_data = verify_response.json()
+                user_id = session_data.get("user_id")
+            else:
+                # Try to decode JWT directly as fallback
+                try:
+                    decoded_token = jwt.decode(token, options={"verify_signature": False})
+                    user_id = decoded_token.get("sub")
+                    if not user_id:
+                        raise HTTPException(status_code=401, detail="No user ID in token")
+                except jwt.InvalidTokenError:
+                    raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Decode the JWT token (simplified verification for development)
-        try:
-            # For development, we'll decode without verification
-            # In production, you should properly verify the JWT with the JWKS
-            decoded_token = jwt.decode(token, options={"verify_signature": False})
-            user_id = decoded_token.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Could not extract user ID from token")
 
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token format")
+        # Get user info from Clerk's Users API
+        async with httpx.AsyncClient() as client:
+            user_response = await client.get(
+                f"https://api.clerk.com/v1/users/{user_id}",
+                headers={
+                    "Authorization": f"Bearer {settings.clerk_secret_key}",
+                    "Content-Type": "application/json"
+                }
+            )
 
-        except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            if user_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Could not fetch user data from Clerk")
 
-        # Get user info from Clerk using the new API
-        try:
-            user_response = clerk.users.get_user(user_id=user_id)
-            user_data = user_response
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=f"Could not fetch user data: {str(e)}")
+            user_data = user_response.json()
 
         # Check if user exists in our database
-        db_user = get_user_by_clerk_id(db, clerk_id=user_data.id)
+        db_user = get_user_by_clerk_id(db, clerk_id=user_data["id"])
 
         # If user doesn't exist, create them
         if not db_user:
             # Handle email addresses safely
             email = ""
-            if user_data.email_addresses and len(user_data.email_addresses) > 0:
-                email = user_data.email_addresses[0].email_address
+            if user_data.get("email_addresses") and len(user_data["email_addresses"]) > 0:
+                email = user_data["email_addresses"][0]["email_address"]
 
             user_create = UserCreate(
-                clerk_id=user_data.id,
+                clerk_id=user_data["id"],
                 email=email,
-                first_name=user_data.first_name,
-                last_name=user_data.last_name
+                first_name=user_data.get("first_name"),
+                last_name=user_data.get("last_name")
             )
             db_user = create_user(db, user=user_create)
 

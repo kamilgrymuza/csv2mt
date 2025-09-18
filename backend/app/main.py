@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import users, health
+from .routers import users, health, test
 from .database import engine, Base
 from .config import settings
 
@@ -25,6 +25,7 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router)
 app.include_router(users.router)
+app.include_router(test.router)
 
 
 @app.get("/")
