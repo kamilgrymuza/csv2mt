@@ -17,7 +17,7 @@ app = FastAPI(
 # Configure CORS with Railway environment variables
 import os
 
-allowed_origins = ["http://localhost:3000", "http://localhost:5173"]  # Local development
+allowed_origins = ["http://localhost:3000", "http://localhost:5173", "https://csv2mt.vercel.app"]  # Local development
 
 # Add Railway domains if available
 if railway_domain := os.getenv("RAILWAY_PUBLIC_DOMAIN"):
