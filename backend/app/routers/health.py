@@ -8,9 +8,9 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=HealthCheck)
+@router.get("/")
 async def health_check():
-    return HealthCheck(
-        status="healthy",
-        timestamp=datetime.now()
-    )
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat()
+    }
