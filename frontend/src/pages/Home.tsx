@@ -15,10 +15,20 @@ export default function Home() {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <h1 style={{ margin: 0 }}>Micro-SaaS MVP</h1>
+        <h1 style={{ margin: 0 }}>CSV2MT</h1>
         <div>
           <SignedOut>
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Link
+                to="/convert"
+                style={{
+                  textDecoration: 'none',
+                  color: '#007bff',
+                  fontWeight: 500
+                }}
+              >
+                Converter
+              </Link>
               <SignInButton mode="modal">
                 <button style={{
                   padding: '0.5rem 1rem',
@@ -48,6 +58,16 @@ export default function Home() {
           <SignedIn>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <Link
+                to="/convert"
+                style={{
+                  textDecoration: 'none',
+                  color: '#007bff',
+                  fontWeight: 500
+                }}
+              >
+                Converter
+              </Link>
+              <Link
                 to="/dashboard"
                 style={{
                   textDecoration: 'none',
@@ -72,7 +92,7 @@ export default function Home() {
         <SignedOut>
           <div>
             <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-              Welcome to our Micro-SaaS
+              CSV to MT940 Converter
             </h2>
             <p style={{
               fontSize: '1.2rem',
@@ -80,8 +100,8 @@ export default function Home() {
               marginBottom: '3rem',
               lineHeight: 1.6
             }}>
-              A complete full-stack application with FastAPI backend, React frontend,
-              and Clerk authentication - ready for your SaaS ideas!
+              Transform your bank statement CSV files into standard MT940 format
+              for seamless integration with accounting software.
             </p>
 
             <div style={{
@@ -96,8 +116,8 @@ export default function Home() {
                 borderRadius: '8px',
                 border: '1px solid #e9ecef'
               }}>
-                <h3>🔒 Secure Authentication</h3>
-                <p>Powered by Clerk with social login, MFA, and user management</p>
+                <h3>📊 Multiple Banks</h3>
+                <p>Support for various bank CSV formats including Santander</p>
               </div>
               <div style={{
                 padding: '1.5rem',
@@ -105,8 +125,8 @@ export default function Home() {
                 borderRadius: '8px',
                 border: '1px solid #e9ecef'
               }}>
-                <h3>⚡ Modern Stack</h3>
-                <p>FastAPI, React, TypeScript, and PostgreSQL for scalability</p>
+                <h3>⚡ Instant Conversion</h3>
+                <p>Fast and accurate conversion to standard MT940 format</p>
               </div>
               <div style={{
                 padding: '1.5rem',
@@ -114,13 +134,13 @@ export default function Home() {
                 borderRadius: '8px',
                 border: '1px solid #e9ecef'
               }}>
-                <h3>🚀 Deploy Ready</h3>
-                <p>Configured for Railway and Vercel deployment</p>
+                <h3>🔒 Secure & Private</h3>
+                <p>No data stored - files processed in memory only</p>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <Link to="/sign-up">
+              <Link to="/convert">
                 <button style={{
                   padding: '0.75rem 2rem',
                   backgroundColor: '#007bff',
@@ -131,10 +151,10 @@ export default function Home() {
                   fontSize: '1rem',
                   fontWeight: 500
                 }}>
-                  Get Started
+                  Try Converter
                 </button>
               </Link>
-              <Link to="/sign-in">
+              <Link to="/sign-up">
                 <button style={{
                   padding: '0.75rem 2rem',
                   backgroundColor: 'transparent',
@@ -145,7 +165,7 @@ export default function Home() {
                   fontSize: '1rem',
                   fontWeight: 500
                 }}>
-                  Sign In
+                  Sign Up
                 </button>
               </Link>
             </div>
@@ -164,20 +184,36 @@ export default function Home() {
             }}>
               You're successfully authenticated. Ready to build something amazing?
             </p>
-            <Link to="/dashboard">
-              <button style={{
-                padding: '0.75rem 2rem',
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: 500
-              }}>
-                Go to Dashboard
-              </button>
-            </Link>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <Link to="/convert">
+                <button style={{
+                  padding: '0.75rem 2rem',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: 500
+                }}>
+                  Convert Files
+                </button>
+              </Link>
+              <Link to="/dashboard">
+                <button style={{
+                  padding: '0.75rem 2rem',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #007bff',
+                  color: '#007bff',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: 500
+                }}>
+                  Dashboard
+                </button>
+              </Link>
+            </div>
           </div>
         </SignedIn>
       </main>
