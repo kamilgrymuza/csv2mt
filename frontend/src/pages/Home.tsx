@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
 import CsvConverter from './CsvConverter'
 

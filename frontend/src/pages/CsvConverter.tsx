@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { SignOutButton } from '@clerk/clerk-react'
@@ -11,11 +11,8 @@ import {
   Typography,
   Space,
   Alert,
-  Statistic,
   Row,
   Col,
-  Divider,
-  Tag,
   Progress,
   notification,
   Spin
@@ -32,7 +29,7 @@ import {
 } from '@ant-design/icons'
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
 
-const { Header, Content, Sider } = Layout
+const { Header, Content } = Layout
 const { Title, Text } = Typography
 const { Option } = Select
 
