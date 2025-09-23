@@ -1,137 +1,75 @@
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
-import CsvConverter from './CsvConverter'
+import SimpleConverter from './SimpleConverter'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
 
 export default function Home() {
   return (
     <>
       <SignedOut>
-        <div style={{
-          minHeight: '100vh',
-          fontFamily: 'system-ui, sans-serif'
-        }}>
-          <header style={{
-            padding: '1rem 2rem',
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #e5e5e5',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <h1 style={{ margin: 0 }}>CSV2MT</h1>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <SignInButton mode="modal">
-                  <button style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #007bff',
-                    color: '#007bff',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}>
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}>
-                    Sign Up
-                  </button>
-                </SignUpButton>
+        <div className="min-h-screen bg-gray-50">
+          <header className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center h-16">
+                <h1 className="text-xl font-semibold text-gray-900">CSV2MT</h1>
+                <div className="flex items-center space-x-4">
+                  <SignInButton mode="modal">
+                    <Button variant="ghost">
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button variant="primary">
+                      Sign Up
+                    </Button>
+                  </SignUpButton>
+                </div>
               </div>
             </div>
           </header>
 
-          <main style={{
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            maxWidth: '800px',
-            margin: '0 auto'
-          }}>
-            <div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+          <main className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 CSV to MT940 Converter
               </h2>
-              <p style={{
-                fontSize: '1.2rem',
-                color: '#666',
-                marginBottom: '3rem',
-                lineHeight: 1.6
-              }}>
+              <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
                 Transform your bank statement CSV files into standard MT940 format
                 for seamless integration with accounting software.
               </p>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '2rem',
-                marginBottom: '3rem'
-              }}>
-                <div style={{
-                  padding: '1.5rem',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  border: '1px solid #e9ecef'
-                }}>
-                  <h3>📊 Multiple Banks</h3>
-                  <p>Support for various bank CSV formats including Santander</p>
-                </div>
-                <div style={{
-                  padding: '1.5rem',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  border: '1px solid #e9ecef'
-                }}>
-                  <h3>⚡ Instant Conversion</h3>
-                  <p>Fast and accurate conversion to standard MT940 format</p>
-                </div>
-                <div style={{
-                  padding: '1.5rem',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  border: '1px solid #e9ecef'
-                }}>
-                  <h3>🔒 Secure & Private</h3>
-                  <p>No data stored - files processed in memory only</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">📊 Multiple Banks</h3>
+                    <p className="text-gray-600">Support for various bank CSV formats including Santander</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">⚡ Instant Conversion</h3>
+                    <p className="text-gray-600">Fast and accurate conversion to standard MT940 format</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">🔒 Secure & Private</h3>
+                    <p className="text-gray-600">No data stored - files processed in memory only</p>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <SignInButton mode="redirect" forceRedirectUrl="/convert">
-                  <button style={{
-                    padding: '0.75rem 2rem',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: 500
-                  }}>
+                  <Button variant="primary" size="lg">
                     Sign In
-                  </button>
+                  </Button>
                 </SignInButton>
                 <Link to="/sign-up">
-                  <button style={{
-                    padding: '0.75rem 2rem',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #007bff',
-                    color: '#007bff',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: 500
-                  }}>
+                  <Button variant="secondary" size="lg">
                     Sign Up
-                  </button>
+                  </Button>
                 </Link>
               </div>
             </div>
@@ -140,7 +78,7 @@ export default function Home() {
       </SignedOut>
 
       <SignedIn>
-        <CsvConverter />
+        <SimpleConverter />
       </SignedIn>
     </>
   )

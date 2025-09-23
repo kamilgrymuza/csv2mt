@@ -4,7 +4,7 @@ import SignInPage from './pages/SignInPage'
 import SignUpPage from './pages/SignUpPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import Dashboard from './pages/Dashboard'
-import CsvConverter from './pages/CsvConverter'
+import SimpleConverter from './pages/SimpleConverter'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -17,7 +17,7 @@ function App() {
           path="/convert"
           element={
             <ProtectedRoute>
-              <CsvConverter />
+              <SimpleConverter />
             </ProtectedRoute>
           }
         />
