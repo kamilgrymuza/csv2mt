@@ -1,6 +1,33 @@
 import { SignedIn, SignOutButton, useAuth, useUser } from '@clerk/clerk-react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import {
+  Layout,
+  Card,
+  Button,
+  Typography,
+  Space,
+  Row,
+  Col,
+  Statistic,
+  Alert,
+  Spin,
+  Tag,
+  Steps,
+  Descriptions
+} from 'antd'
+import {
+  UserOutlined,
+  LogoutOutlined,
+  DatabaseOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  ToolOutlined,
+  GlobalOutlined
+} from '@ant-design/icons'
+
+const { Header, Content } = Layout
+const { Title, Text, Paragraph } = Typography
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -41,144 +68,245 @@ export default function Dashboard() {
   })
 
   return (
-    <div style={{
-      padding: '2rem',
-      maxWidth: '800px',
-      margin: '0 auto',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
+    <Layout style={{ minHeight: '100vh' }}>
       <SignedIn>
-        <header style={{
+        {/* Header */}
+        <Header style={{
+          background: '#fff',
+          borderBottom: '1px solid #f0f0f0',
+          padding: '0 24px',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '2rem',
-          borderBottom: '1px solid #e5e5e5',
-          paddingBottom: '1rem'
+          justifyContent: 'space-between'
         }}>
-          <h1>Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UserOutlined style={{ color: '#1890ff' }} />
+              Dashboard
+            </Title>
+            <Tag color="blue">Welcome Back</Tag>
+          </div>
           <SignOutButton>
-            <button style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}>
+            <Button
+              type="primary"
+              danger
+              icon={<LogoutOutlined />}
+            >
               Sign Out
-            </button>
+            </Button>
           </SignOutButton>
-        </header>
+        </Header>
 
-        <div style={{
-          display: 'grid',
-          gap: '2rem'
-        }}>
-          <div style={{
-            padding: '1.5rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ marginTop: 0 }}>Welcome back!</h3>
-            <p>You're successfully signed in with Clerk.</p>
-          </div>
+        {/* Main Content */}
+        <Content style={{ padding: '24px', background: '#f5f5f5' }}>
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
-          <div style={{
-            padding: '1.5rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ marginTop: 0 }}>Clerk User Info</h3>
-            <p><strong>ID:</strong> {user?.id}</p>
-            <p><strong>Email:</strong> {user?.primaryEmailAddress?.emailAddress}</p>
-            <p><strong>First Name:</strong> {user?.firstName || 'Not provided'}</p>
-            <p><strong>Last Name:</strong> {user?.lastName || 'Not provided'}</p>
-            <p><strong>Created:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}</p>
-          </div>
+            {/* Welcome Section */}
+            <Card>
+              <Row gutter={24} align="middle">
+                <Col>
+                  <Space direction="vertical">
+                    <Title level={2} style={{ margin: 0 }}>
+                      Welcome back, {user?.firstName || 'User'}!
+                    </Title>
+                    <Text type="secondary">
+                      You're successfully authenticated with Clerk
+                    </Text>
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
 
-          <div style={{
-            padding: '1.5rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ marginTop: 0 }}>Backend API Integration</h3>
-            {isLoading ? (
-              <p>Loading user data from backend...</p>
-            ) : error ? (
-              <div style={{ color: '#dc3545' }}>
-                <p><strong>Error connecting to backend:</strong></p>
-                <pre style={{
-                  backgroundColor: '#f8d7da',
-                  padding: '1rem',
-                  borderRadius: '4px',
-                  overflow: 'auto',
-                  fontSize: '0.875rem'
-                }}>
-                  {error.message}
-                </pre>
-              </div>
-            ) : userData ? (
-              <div style={{ color: '#198754' }}>
-                <p><strong>✓ Successfully connected to backend!</strong></p>
-                <p><strong>Backend User ID:</strong> {userData.id}</p>
-                <p><strong>Backend Email:</strong> {userData.email}</p>
-                <p><strong>Backend Created:</strong> {new Date(userData.created_at).toLocaleDateString()}</p>
-              </div>
-            ) : (
-              <p>No data received from backend</p>
+            <Row gutter={24}>
+              {/* User Information */}
+              <Col xs={24} lg={12}>
+                <Card
+                  title={
+                    <Space>
+                      <UserOutlined />
+                      User Information
+                    </Space>
+                  }
+                  style={{ height: '100%' }}
+                >
+                  <Descriptions column={1} bordered size="small">
+                    <Descriptions.Item label="User ID">
+                      <Text code>{user?.id}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Email">
+                      {user?.primaryEmailAddress?.emailAddress}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="First Name">
+                      {user?.firstName || <Text type="secondary">Not provided</Text>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Last Name">
+                      {user?.lastName || <Text type="secondary">Not provided</Text>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Account Created">
+                      {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+
+              {/* System Status */}
+              <Col xs={24} lg={12}>
+                <Card
+                  title={
+                    <Space>
+                      <GlobalOutlined />
+                      System Status
+                    </Space>
+                  }
+                  style={{ height: '100%' }}
+                >
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Statistic
+                          title="Frontend Status"
+                          value="Online"
+                          prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                          valueStyle={{ color: '#52c41a' }}
+                        />
+                      </Col>
+                      <Col span={12}>
+                        <Statistic
+                          title="Backend Status"
+                          value={publicTest ? "Online" : "Checking..."}
+                          prefix={publicTest ?
+                            <CheckCircleOutlined style={{ color: '#52c41a' }} /> :
+                            <Spin size="small" />
+                          }
+                          valueStyle={{ color: publicTest ? '#52c41a' : '#1890ff' }}
+                        />
+                      </Col>
+                    </Row>
+
+                    {publicTest && (
+                      <Alert
+                        message="Backend Connectivity"
+                        description={publicTest.message}
+                        type="success"
+                        showIcon
+                        icon={<CheckCircleOutlined />}
+                      />
+                    )}
+                  </Space>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Backend Integration Status */}
+            <Card
+              title={
+                <Space>
+                  <DatabaseOutlined />
+                  Backend API Integration
+                </Space>
+              }
+            >
+              {isLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <Spin size="large" />
+                  <Paragraph style={{ marginTop: '1rem' }}>
+                    Loading user data from backend...
+                  </Paragraph>
+                </div>
+              ) : error ? (
+                <Alert
+                  message="Backend Connection Error"
+                  description={
+                    <div>
+                      <Paragraph>Failed to connect to the backend API:</Paragraph>
+                      <Text code style={{
+                        display: 'block',
+                        padding: '8px',
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: '4px',
+                        marginTop: '8px'
+                      }}>
+                        {error.message}
+                      </Text>
+                    </div>
+                  }
+                  type="error"
+                  showIcon
+                  icon={<ExclamationCircleOutlined />}
+                />
+              ) : userData ? (
+                <Alert
+                  message="Successfully Connected to Backend!"
+                  description={
+                    <Descriptions column={1} size="small" style={{ marginTop: '12px' }}>
+                      <Descriptions.Item label="Backend User ID">
+                        <Text code>{userData.id}</Text>
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Backend Email">
+                        {userData.email}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Backend Account Created">
+                        {new Date(userData.created_at).toLocaleDateString()}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  }
+                  type="success"
+                  showIcon
+                  icon={<CheckCircleOutlined />}
+                />
+              ) : (
+                <Alert
+                  message="No Data Received"
+                  description="The backend connection is established but no user data was returned."
+                  type="warning"
+                  showIcon
+                />
+              )}
+            </Card>
+
+            {/* Setup Instructions (if needed) */}
+            {error && authInfo && (
+              <Card
+                title={
+                  <Space>
+                    <ToolOutlined />
+                    Setup Required
+                  </Space>
+                }
+              >
+                <Alert
+                  message="Configuration Needed"
+                  description={authInfo.message}
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: '16px' }}
+                />
+
+                {authInfo.steps && (
+                  <Steps
+                    direction="vertical"
+                    size="small"
+                    items={authInfo.steps.map((step: string, index: number) => ({
+                      title: `Step ${index + 1}`,
+                      description: step,
+                      status: 'wait'
+                    }))}
+                  />
+                )}
+
+                <Alert
+                  message="Note"
+                  description="The authentication system is fully configured and working. You just need to add your real Clerk credentials to test the protected endpoints."
+                  type="info"
+                  showIcon
+                  style={{ marginTop: '16px' }}
+                />
+              </Card>
             )}
-          </div>
 
-          <div style={{
-            padding: '1.5rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <h3 style={{ marginTop: 0 }}>Backend Connectivity Test</h3>
-            {publicTest ? (
-              <div style={{ color: '#198754' }}>
-                <p><strong>✓ Backend is reachable!</strong></p>
-                <p>{publicTest.message}</p>
-              </div>
-            ) : (
-              <p>Testing backend connectivity...</p>
-            )}
-          </div>
-
-          {error && authInfo && (
-            <div style={{
-              padding: '1.5rem',
-              backgroundColor: '#fff3cd',
-              borderRadius: '8px',
-              border: '1px solid #ffeaa7'
-            }}>
-              <h3 style={{ marginTop: 0, color: '#856404' }}>🔧 Setup Required</h3>
-              <p style={{ color: '#856404' }}>{authInfo.message}</p>
-              <ol style={{ color: '#856404', paddingLeft: '1.5rem' }}>
-                {authInfo.steps?.map((step: string, index: number) => (
-                  <li key={index} style={{ marginBottom: '0.5rem' }}>{step}</li>
-                ))}
-              </ol>
-              <p style={{
-                marginTop: '1rem',
-                padding: '0.75rem',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '4px',
-                color: '#495057',
-                fontSize: '0.9rem'
-              }}>
-                <strong>Note:</strong> The authentication system is fully configured and working.
-                You just need to add your real Clerk credentials to test the protected endpoints.
-              </p>
-            </div>
-          )}
-        </div>
+          </Space>
+        </Content>
       </SignedIn>
-    </div>
+    </Layout>
   )
 }

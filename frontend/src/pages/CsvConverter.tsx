@@ -1,7 +1,40 @@
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import './CsvConverter.css'
+import { SignOutButton } from '@clerk/clerk-react'
+import {
+  Layout,
+  Card,
+  Button,
+  Select,
+  Upload,
+  Typography,
+  Space,
+  Alert,
+  Statistic,
+  Row,
+  Col,
+  Divider,
+  Tag,
+  Progress,
+  notification,
+  Spin
+} from 'antd'
+import {
+  UploadOutlined,
+  DownloadOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
+  FileTextOutlined,
+  BankOutlined,
+  LogoutOutlined,
+  CheckCircleOutlined
+} from '@ant-design/icons'
+import type { UploadFile, UploadProps } from 'antd/es/upload/interface'
+
+const { Header, Content, Sider } = Layout
+const { Title, Text } = Typography
+const { Option } = Select
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -16,7 +49,7 @@ export default function CsvConverter() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedBank, setSelectedBank] = useState<string>('')
   const [conversionState, setConversionState] = useState<ConversionState>({ status: 'idle' })
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [fileList, setFileList] = useState<UploadFile[]>([])
 
   // Fetch supported banks
   const { data: banks, isLoading: banksLoading } = useQuery({
@@ -27,46 +60,35 @@ export default function CsvConverter() {
     }
   })
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
+  const uploadProps: UploadProps = {
+    accept: '.csv',
+    beforeUpload: (file) => {
       if (!file.name.toLowerCase().endsWith('.csv')) {
-        setConversionState({
-          status: 'error',
-          message: 'Please select a CSV file'
+        notification.error({
+          message: 'Invalid File Type',
+          description: 'Please select a CSV file'
         })
-        return
+        return false
       }
       setSelectedFile(file)
+      setFileList([file])
       setConversionState({ status: 'idle' })
-    }
-  }
-
-  const handleDragOver = (event: React.DragEvent) => {
-    event.preventDefault()
-  }
-
-  const handleDrop = (event: React.DragEvent) => {
-    event.preventDefault()
-    const file = event.dataTransfer.files[0]
-    if (file) {
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        setConversionState({
-          status: 'error',
-          message: 'Please select a CSV file'
-        })
-        return
-      }
-      setSelectedFile(file)
+      return false // Prevent auto upload
+    },
+    onRemove: () => {
+      setSelectedFile(null)
+      setFileList([])
       setConversionState({ status: 'idle' })
-    }
+    },
+    fileList,
+    maxCount: 1
   }
 
   const handleConvert = async () => {
     if (!selectedFile || !selectedBank) {
-      setConversionState({
-        status: 'error',
-        message: 'Please select both a file and a bank'
+      notification.error({
+        message: 'Missing Information',
+        description: 'Please select both a file and a bank'
       })
       return
     }
@@ -96,29 +118,42 @@ export default function CsvConverter() {
         downloadUrl,
         filename
       })
+
+      notification.success({
+        message: 'Conversion Complete',
+        description: 'Your MT940 file is ready for download'
+      })
     } catch (error) {
       console.error('Conversion error:', error)
+      let errorMessage = 'Conversion failed. Please check your file format.'
+
       if (axios.isAxiosError(error) && error.response?.data) {
         const reader = new FileReader()
         reader.onload = () => {
           try {
             const errorData = JSON.parse(reader.result as string)
-            setConversionState({
-              status: 'error',
-              message: errorData.detail || 'Conversion failed'
-            })
+            errorMessage = errorData.detail || errorMessage
           } catch {
-            setConversionState({
-              status: 'error',
-              message: 'Conversion failed. Please check your file format.'
-            })
+            // Use default error message
           }
+          setConversionState({
+            status: 'error',
+            message: errorMessage
+          })
+          notification.error({
+            message: 'Conversion Failed',
+            description: errorMessage
+          })
         }
         reader.readAsText(error.response.data)
       } else {
         setConversionState({
           status: 'error',
           message: 'Network error. Please try again.'
+        })
+        notification.error({
+          message: 'Network Error',
+          description: 'Please check your connection and try again.'
         })
       }
     }
@@ -140,164 +175,227 @@ export default function CsvConverter() {
     setSelectedFile(null)
     setSelectedBank('')
     setConversionState({ status: 'idle' })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    setFileList([])
+  }
+
+  const getProgress = () => {
+    switch (conversionState.status) {
+      case 'converting':
+        return 50
+      case 'success':
+        return 100
+      case 'error':
+        return 0
+      default:
+        return 0
     }
   }
 
   return (
-    <div className="csv-converter">
-      <div className="container">
-        <header className="header">
-          <h1 className="title">CSV to MT940 Converter</h1>
-          <p className="subtitle">
-            Convert your bank statements from CSV format to MT940 standard
-          </p>
-        </header>
+    <Layout style={{ minHeight: '100vh' }}>
+      {/* Header */}
+      <Header style={{
+        background: '#fff',
+        borderBottom: '1px solid #f0f0f0',
+        padding: '0 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileTextOutlined style={{ color: '#1890ff' }} />
+            CSV to MT940 Converter
+          </Title>
+        </div>
+        <SignOutButton>
+          <Button icon={<LogoutOutlined />} type="primary" danger>
+            Sign Out
+          </Button>
+        </SignOutButton>
+      </Header>
 
-        <div className="converter-card">
-          {/* Bank Selection */}
-          <div className="form-section">
-            <label className="form-label">
-              Select Your Bank
-              <span className="required">*</span>
-            </label>
-            <select
-              value={selectedBank}
-              onChange={(e) => setSelectedBank(e.target.value)}
-              className="bank-select"
-              disabled={banksLoading}
-            >
-              <option value="">
-                {banksLoading ? 'Loading banks...' : 'Choose your bank'}
-              </option>
-              {banks?.map((bank) => (
-                <option key={bank} value={bank}>
-                  {bank.charAt(0).toUpperCase() + bank.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
+      <Layout>
+        {/* Main Content */}
+        <Content style={{ padding: '24px', background: '#f5f5f5' }}>
+          <Row gutter={24}>
+            {/* Converter Section */}
+            <Col xs={24} lg={16}>
+              <Card
+                title={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BankOutlined />
+                    File Conversion
+                  </div>
+                }
+                style={{ height: 'fit-content' }}
+              >
+                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                  {/* Bank Selection */}
+                  <div>
+                    <Text strong style={{ marginBottom: '8px', display: 'block' }}>
+                      Select Your Bank <Text type="danger">*</Text>
+                    </Text>
+                    <Select
+                      value={selectedBank}
+                      onChange={setSelectedBank}
+                      placeholder={banksLoading ? 'Loading banks...' : 'Choose your bank'}
+                      style={{ width: '100%' }}
+                      size="large"
+                      loading={banksLoading}
+                      disabled={banksLoading}
+                    >
+                      {banks?.map((bank) => (
+                        <Option key={bank} value={bank}>
+                          <Space>
+                            <BankOutlined />
+                            {bank.charAt(0).toUpperCase() + bank.slice(1)}
+                          </Space>
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
 
-          {/* File Upload */}
-          <div className="form-section">
-            <label className="form-label">
-              Upload CSV File
-              <span className="required">*</span>
-            </label>
-            <div
-              className={`file-upload-area ${selectedFile ? 'has-file' : ''}`}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept=".csv"
-                className="file-input"
-                hidden
-              />
-              <div className="file-upload-content">
-                {selectedFile ? (
-                  <>
-                    <div className="file-icon">📄</div>
-                    <div className="file-info">
-                      <p className="file-name">{selectedFile.name}</p>
-                      <p className="file-size">
-                        {(selectedFile.size / 1024).toFixed(1)} KB
+                  {/* File Upload */}
+                  <div>
+                    <Text strong style={{ marginBottom: '8px', display: 'block' }}>
+                      Upload CSV File <Text type="danger">*</Text>
+                    </Text>
+                    <Upload.Dragger {...uploadProps} style={{ background: '#fafafa' }}>
+                      <p className="ant-upload-drag-icon">
+                        <UploadOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
                       </p>
+                      <p className="ant-upload-text">
+                        Click or drag CSV file to this area to upload
+                      </p>
+                      <p className="ant-upload-hint">
+                        Support for CSV files only. Single file upload.
+                      </p>
+                    </Upload.Dragger>
+                  </div>
+
+                  {/* Progress */}
+                  {conversionState.status !== 'idle' && (
+                    <div>
+                      <Text strong style={{ marginBottom: '8px', display: 'block' }}>
+                        Conversion Progress
+                      </Text>
+                      <Progress
+                        percent={getProgress()}
+                        status={conversionState.status === 'error' ? 'exception' :
+                               conversionState.status === 'success' ? 'success' : 'active'}
+                        format={() => conversionState.status.charAt(0).toUpperCase() + conversionState.status.slice(1)}
+                      />
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="upload-icon">⬆️</div>
-                    <p className="upload-text">
-                      <strong>Click to upload</strong> or drag and drop
-                    </p>
-                    <p className="upload-hint">CSV files only</p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+                  )}
 
-          {/* Status Messages */}
-          {conversionState.status !== 'idle' && (
-            <div className={`status-message ${conversionState.status}`}>
-              {conversionState.status === 'converting' && (
-                <div className="loading-spinner">⏳</div>
-              )}
-              {conversionState.status === 'success' && (
-                <div className="success-icon">✅</div>
-              )}
-              {conversionState.status === 'error' && (
-                <div className="error-icon">❌</div>
-              )}
-              <p>{conversionState.message}</p>
-            </div>
-          )}
+                  {/* Status Messages */}
+                  {conversionState.message && (
+                    <Alert
+                      message={conversionState.message}
+                      type={conversionState.status === 'success' ? 'success' :
+                           conversionState.status === 'error' ? 'error' : 'info'}
+                      showIcon
+                      icon={conversionState.status === 'converting' ? <Spin /> : undefined}
+                    />
+                  )}
 
-          {/* Action Buttons */}
-          <div className="button-group">
-            {conversionState.status === 'success' ? (
-              <>
-                <button
-                  onClick={handleDownload}
-                  className="btn btn-primary"
-                >
-                  📥 Download MT940 File
-                </button>
-                <button
-                  onClick={resetForm}
-                  className="btn btn-secondary"
-                >
-                  🔄 Convert Another File
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={handleConvert}
-                  disabled={!selectedFile || !selectedBank || conversionState.status === 'converting'}
-                  className="btn btn-primary"
-                >
-                  {conversionState.status === 'converting' ? '⏳ Converting...' : '🔄 Convert to MT940'}
-                </button>
-                {(selectedFile || selectedBank) && (
-                  <button
-                    onClick={resetForm}
-                    className="btn btn-secondary"
-                  >
-                    🗑️ Clear
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+                  {/* Action Buttons */}
+                  <div>
+                    <Space size="middle">
+                      {conversionState.status === 'success' ? (
+                        <>
+                          <Button
+                            type="primary"
+                            icon={<DownloadOutlined />}
+                            size="large"
+                            onClick={handleDownload}
+                          >
+                            Download MT940 File
+                          </Button>
+                          <Button
+                            icon={<ReloadOutlined />}
+                            size="large"
+                            onClick={resetForm}
+                          >
+                            Convert Another File
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="primary"
+                            icon={conversionState.status === 'converting' ? <Spin /> : <ReloadOutlined />}
+                            size="large"
+                            loading={conversionState.status === 'converting'}
+                            disabled={!selectedFile || !selectedBank}
+                            onClick={handleConvert}
+                          >
+                            {conversionState.status === 'converting' ? 'Converting...' : 'Convert to MT940'}
+                          </Button>
+                          {(selectedFile || selectedBank) && (
+                            <Button
+                              icon={<DeleteOutlined />}
+                              size="large"
+                              onClick={resetForm}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </Space>
+                  </div>
+                </Space>
+              </Card>
+            </Col>
 
-        {/* Info Section */}
-        <div className="info-section">
-          <h3>About MT940 Format</h3>
-          <p>
-            MT940 is an international standard for electronic bank statements.
-            This converter transforms your bank's CSV export into the standardized
-            MT940 format for use with accounting software and financial systems.
-          </p>
-          <div className="supported-banks">
-            <h4>Currently Supported Banks:</h4>
-            <div className="bank-list">
-              {banks?.map((bank) => (
-                <span key={bank} className="bank-badge">
-                  {bank.charAt(0).toUpperCase() + bank.slice(1)}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            {/* Sidebar */}
+            <Col xs={24} lg={8}>
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                {/* Supported Banks */}
+                <Card title="Supported Banks" size="small">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {banksLoading ? (
+                      <Spin />
+                    ) : (
+                      banks?.map((bank) => (
+                        <Card
+                          key={bank}
+                          size="small"
+                          style={{
+                            background: selectedBank === bank ? '#e6f7ff' : '#fafafa',
+                            border: selectedBank === bank ? '1px solid #1890ff' : '1px solid #d9d9d9'
+                          }}
+                        >
+                          <Space>
+                            <BankOutlined style={{ color: '#1890ff' }} />
+                            <Text strong>
+                              {bank.charAt(0).toUpperCase() + bank.slice(1)}
+                            </Text>
+                            {selectedBank === bank && (
+                              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                            )}
+                          </Space>
+                        </Card>
+                      ))
+                    )}
+                  </Space>
+                </Card>
+
+                {/* About MT940 */}
+                <Card title="About MT940 Format" size="small">
+                  <Text>
+                    MT940 is an international standard for electronic bank statements.
+                    This converter transforms your bank's CSV export into the standardized
+                    MT940 format for use with accounting software and financial systems.
+                  </Text>
+                </Card>
+              </Space>
+            </Col>
+          </Row>
+        </Content>
+      </Layout>
+    </Layout>
   )
 }

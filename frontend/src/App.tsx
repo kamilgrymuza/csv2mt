@@ -13,7 +13,14 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/convert" element={<CsvConverter />} />
+        <Route
+          path="/convert"
+          element={
+            <ProtectedRoute>
+              <CsvConverter />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/forgot-password/*" element={<ForgotPasswordPage />} />
