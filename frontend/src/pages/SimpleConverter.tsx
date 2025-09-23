@@ -18,6 +18,7 @@ export default function SimpleConverter() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedBank, setSelectedBank] = useState<string>('')
   const [conversionState, setConversionState] = useState<ConversionState>({ status: 'idle' })
+  const [isDragOver, setIsDragOver] = useState(false)
 
   // Fetch supported banks
   const { data: banks, isLoading: banksLoading } = useQuery({
@@ -31,15 +32,39 @@ export default function SimpleConverter() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        setConversionState({
-          status: 'error',
-          message: 'Please select a CSV file'
-        })
-        return
-      }
-      setSelectedFile(file)
-      setConversionState({ status: 'idle' })
+      processFile(file)
+    }
+  }
+
+  const processFile = (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setConversionState({
+        status: 'error',
+        message: 'Please select a CSV file'
+      })
+      return
+    }
+    setSelectedFile(file)
+    setConversionState({ status: 'idle' })
+  }
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragOver(false)
+
+    const files = event.dataTransfer.files
+    if (files.length > 0) {
+      processFile(files[0])
     }
   }
 
@@ -159,10 +184,19 @@ export default function SimpleConverter() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Upload CSV File <span className="text-red-500">*</span>
                   </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                  <div
+                    className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
+                      isDragOver
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-gray-300'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <div className="space-y-1 text-center">
                       <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
+                        className={`mx-auto h-12 w-12 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`}
                         stroke="currentColor"
                         fill="none"
                         viewBox="0 0 48 48"
@@ -174,7 +208,7 @@ export default function SimpleConverter() {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <div className="flex text-sm text-gray-600">
+                      <div className={`flex text-sm ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
                         <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
                           <span>Upload a file</span>
                           <input
@@ -186,7 +220,9 @@ export default function SimpleConverter() {
                         </label>
                         <p className="pl-1">or drag and drop</p>
                       </div>
-                      <p className="text-xs text-gray-500">CSV files only</p>
+                      <p className={`text-xs ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`}>
+                        {isDragOver ? 'Drop your CSV file here' : 'CSV files only'}
+                      </p>
                       {selectedFile && (
                         <div className="mt-2 p-2 bg-green-50 rounded-md">
                           <p className="text-sm text-green-700">{selectedFile.name}</p>
