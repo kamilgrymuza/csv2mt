@@ -287,54 +287,6 @@ export default function SimpleConverter() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Supported Banks */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Supported Banks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {banksLoading ? (
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {banks?.map((bank) => (
-                      <div
-                        key={bank}
-                        className={`flex items-center p-3 rounded-lg border ${
-                          selectedBank === bank
-                            ? 'border-blue-200 bg-blue-50'
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 font-medium text-sm">
-                              {bank.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">
-                            {bank.charAt(0).toUpperCase() + bank.slice(1)}
-                          </p>
-                        </div>
-                        {selectedBank === bank && (
-                          <div className="ml-auto">
-                            <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* About MT940 */}
             <Card>
               <CardHeader>
