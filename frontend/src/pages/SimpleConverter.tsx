@@ -1,11 +1,20 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { SignOutButton } from '@clerk/clerk-react'
+import { SignOutButton, useAuth } from '@clerk/clerk-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 
 const API_URL = import.meta.env.VITE_API_URL
+
+interface SubscriptionStatus {
+  has_active_subscription: boolean
+  status: string | null
+  conversions_used: number
+  conversions_limit: number | null
+  can_convert: boolean
+}
 
 interface ConversionState {
   status: 'idle' | 'uploading' | 'converting' | 'success' | 'error'
@@ -19,6 +28,23 @@ export default function SimpleConverter() {
   const [selectedBank, setSelectedBank] = useState<string>('')
   const [conversionState, setConversionState] = useState<ConversionState>({ status: 'idle' })
   const [isDragOver, setIsDragOver] = useState(false)
+  const { getToken } = useAuth()
+  const navigate = useNavigate()
+
+  // Fetch subscription status
+  const { data: subscriptionStatus, refetch: refetchStatus } = useQuery<SubscriptionStatus>({
+    queryKey: ['subscriptionStatus'],
+    queryFn: async () => {
+      const token = await getToken()
+      const response = await axios.get(`${API_URL}/subscription/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      return response.data
+    },
+    enabled: !!getToken
+  })
 
   // Fetch supported banks
   const { data: banks, isLoading: banksLoading } = useQuery({
@@ -77,16 +103,27 @@ export default function SimpleConverter() {
       return
     }
 
+    // Check if user can convert
+    if (subscriptionStatus && !subscriptionStatus.can_convert) {
+      setConversionState({
+        status: 'error',
+        message: 'You have reached your free conversion limit. Please upgrade to continue.'
+      })
+      return
+    }
+
     setConversionState({ status: 'converting' })
 
     try {
+      const token = await getToken()
       const formData = new FormData()
       formData.append('file', selectedFile)
       formData.append('bank_name', selectedBank)
 
       const response = await axios.post(`${API_URL}/conversion/csv-to-mt940`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
         responseType: 'blob'
       })
@@ -102,12 +139,24 @@ export default function SimpleConverter() {
         downloadUrl,
         filename
       })
-    } catch (error) {
+
+      // Refetch subscription status to update usage count
+      refetchStatus()
+    } catch (error: any) {
       console.error('Conversion error:', error)
-      setConversionState({
-        status: 'error',
-        message: 'Conversion failed. Please check your file format.'
-      })
+
+      // Handle 402 Payment Required error
+      if (error.response?.status === 402) {
+        setConversionState({
+          status: 'error',
+          message: 'You have reached your free conversion limit. Please upgrade to continue.'
+        })
+      } else {
+        setConversionState({
+          status: 'error',
+          message: error.response?.data?.detail || 'Conversion failed. Please check your file format.'
+        })
+      }
     }
   }
 
@@ -138,11 +187,19 @@ export default function SimpleConverter() {
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">CSV to MT940 Converter</h1>
             </div>
-            <SignOutButton>
-              <Button variant="danger">
-                Sign Out
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/subscription')}
+              >
+                Subscription
               </Button>
-            </SignOutButton>
+              <SignOutButton>
+                <Button variant="danger">
+                  Sign Out
+                </Button>
+              </SignOutButton>
+            </div>
           </div>
         </div>
       </header>
@@ -287,6 +344,71 @@ export default function SimpleConverter() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Usage Display */}
+            {subscriptionStatus && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {subscriptionStatus.has_active_subscription ? 'Premium Plan' : 'Free Plan'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {subscriptionStatus.has_active_subscription ? (
+                      <div className="text-center py-4">
+                        <div className="text-green-600 font-semibold mb-2">✓ Unlimited Conversions</div>
+                        <p className="text-sm text-gray-600">
+                          You have unlimited access to all features
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Conversions used</span>
+                            <span className="font-medium">
+                              {subscriptionStatus.conversions_used} / {subscriptionStatus.conversions_limit}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                              className={`h-2.5 rounded-full ${
+                                subscriptionStatus.conversions_used >= (subscriptionStatus.conversions_limit || 0)
+                                  ? 'bg-red-600'
+                                  : subscriptionStatus.conversions_used >= (subscriptionStatus.conversions_limit || 0) * 0.8
+                                  ? 'bg-yellow-500'
+                                  : 'bg-blue-600'
+                              }`}
+                              style={{
+                                width: `${Math.min(
+                                  (subscriptionStatus.conversions_used / (subscriptionStatus.conversions_limit || 1)) * 100,
+                                  100
+                                )}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                        {!subscriptionStatus.can_convert && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                            <p className="text-sm text-yellow-800 mb-2">
+                              You've reached your monthly limit
+                            </p>
+                          </div>
+                        )}
+                        <Button
+                          variant="primary"
+                          onClick={() => navigate('/subscription')}
+                          className="w-full"
+                        >
+                          Upgrade to Premium - $4.99/mo
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* About MT940 */}
             <Card>
               <CardHeader>

@@ -5,6 +5,7 @@ import SignUpPage from './pages/SignUpPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import Dashboard from './pages/Dashboard'
 import SimpleConverter from './pages/SimpleConverter'
+import SubscriptionPage from './pages/SubscriptionPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -18,6 +19,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SimpleConverter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subscription"
+          element={
+            <ProtectedRoute>
+              <SubscriptionPage />
             </ProtectedRoute>
           }
         />

@@ -1,7 +1,12 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func, extract
+from datetime import datetime, timezone
+from typing import Optional
 from . import models, schemas
+from .config import settings
 
 
+# User CRUD Operations
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
@@ -47,3 +52,94 @@ def delete_user(db: Session, user_id: int):
         db.delete(db_user)
         db.commit()
     return db_user
+
+
+# Subscription CRUD Operations
+def get_subscription_by_user_id(db: Session, user_id: int) -> Optional[models.Subscription]:
+    """Get subscription for a user"""
+    return db.query(models.Subscription).filter(
+        models.Subscription.user_id == user_id
+    ).first()
+
+
+def get_subscription_by_stripe_customer_id(db: Session, customer_id: str) -> Optional[models.Subscription]:
+    """Get subscription by Stripe customer ID"""
+    return db.query(models.Subscription).filter(
+        models.Subscription.stripe_customer_id == customer_id
+    ).first()
+
+
+def create_subscription(db: Session, subscription: schemas.SubscriptionCreate) -> models.Subscription:
+    """Create a new subscription"""
+    db_subscription = models.Subscription(**subscription.dict())
+    db.add(db_subscription)
+    db.commit()
+    db.refresh(db_subscription)
+    return db_subscription
+
+
+def user_has_active_subscription(db: Session, user_id: int) -> bool:
+    """Check if user has an active subscription"""
+    subscription = get_subscription_by_user_id(db, user_id)
+    if not subscription:
+        return False
+
+    return subscription.status == models.SubscriptionStatus.ACTIVE
+
+
+# Conversion Usage CRUD Operations
+def create_conversion_usage(db: Session, usage: schemas.ConversionUsageCreate) -> models.ConversionUsage:
+    """Record a conversion usage"""
+    db_usage = models.ConversionUsage(**usage.dict())
+    db.add(db_usage)
+    db.commit()
+    db.refresh(db_usage)
+    return db_usage
+
+
+def get_user_monthly_conversions(db: Session, user_id: int) -> int:
+    """Get the number of conversions for current month"""
+    now = datetime.now(timezone.utc)
+    current_month = now.month
+    current_year = now.year
+
+    count = db.query(func.count(models.ConversionUsage.id)).filter(
+        models.ConversionUsage.user_id == user_id,
+        extract('month', models.ConversionUsage.conversion_date) == current_month,
+        extract('year', models.ConversionUsage.conversion_date) == current_year
+    ).scalar()
+
+    return count or 0
+
+
+def user_can_convert(db: Session, user_id: int) -> bool:
+    """
+    Check if user can perform a conversion based on:
+    1. Active subscription (unlimited)
+    2. Free tier limit (5 per month)
+    """
+    # Check if user has active subscription
+    if user_has_active_subscription(db, user_id):
+        return True
+
+    # Check free tier limit
+    monthly_conversions = get_user_monthly_conversions(db, user_id)
+    return monthly_conversions < settings.free_conversion_limit
+
+
+def get_user_usage_stats(db: Session, user_id: int) -> dict:
+    """Get user usage statistics"""
+    has_subscription = user_has_active_subscription(db, user_id)
+    conversions_used = get_user_monthly_conversions(db, user_id)
+
+    subscription = get_subscription_by_user_id(db, user_id)
+
+    return {
+        "has_active_subscription": has_subscription,
+        "status": subscription.status if subscription else None,
+        "conversions_used": conversions_used,
+        "conversions_limit": None if has_subscription else settings.free_conversion_limit,
+        "can_convert": user_can_convert(db, user_id),
+        "cancel_at_period_end": subscription.cancel_at_period_end if subscription else None,
+        "current_period_end": subscription.current_period_end if subscription else None
+    }

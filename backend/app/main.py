@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import users, health, test, conversion
+from .routers import users, health, test, conversion, subscription
 from .database import engine, Base
 from .config import settings
 
@@ -31,6 +31,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routers
@@ -38,6 +39,7 @@ app.include_router(health.router)
 app.include_router(users.router)
 app.include_router(test.router)
 app.include_router(conversion.router)
+app.include_router(subscription.router)
 
 
 @app.get("/")

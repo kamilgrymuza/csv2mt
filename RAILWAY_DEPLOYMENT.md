@@ -119,7 +119,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:5173",
+        "http://localhost:3000",
         "https://your-frontend-domain.vercel.app",  # Add your production frontend URL
         "https://your-frontend-domain.railway.app"  # If using Railway for frontend
     ],

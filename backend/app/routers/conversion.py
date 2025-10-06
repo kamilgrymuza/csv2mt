@@ -1,11 +1,17 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import Response
 from typing import List
+from sqlalchemy.orm import Session
 import logging
 
 from ..services import BankParserRegistry
 from ..services.parsers.base import BankParserError
 from ..services.mt940_converter import MT940Converter, MT940ConverterError
+from ..dependencies import get_current_user_with_usage_check
+from ..database import get_db
+from ..models import User
+from ..schemas import ConversionUsageCreate
+from .. import crud
 
 router = APIRouter(prefix="/conversion", tags=["conversion"])
 logger = logging.getLogger(__name__)
@@ -19,7 +25,9 @@ async def get_supported_banks() -> List[str]:
 @router.post("/csv-to-mt940")
 async def convert_csv_to_mt940(
     file: UploadFile = File(...),
-    bank_name: str = Form(...)
+    bank_name: str = Form(...),
+    current_user: User = Depends(get_current_user_with_usage_check),
+    db: Session = Depends(get_db)
 ) -> Response:
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV file")
@@ -37,6 +45,15 @@ async def convert_csv_to_mt940(
 
         # Convert to MT940
         mt940_content = MT940Converter.convert(bank_statement)
+
+        # Track conversion usage (after successful conversion)
+        usage = ConversionUsageCreate(
+            user_id=current_user.id,
+            file_name=file.filename,
+            bank_name=bank_name
+        )
+        crud.create_conversion_usage(db, usage)
+        logger.info(f"Conversion tracked for user {current_user.id}")
 
         # Return MT940 file
         filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
