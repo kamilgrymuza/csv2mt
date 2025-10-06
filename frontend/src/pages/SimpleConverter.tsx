@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { SignOutButton, useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
+import AppHeader from '../components/AppHeader'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -235,29 +236,7 @@ export default function SimpleConverter() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">CSV to MT940 Converter</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="secondary"
-                onClick={() => navigate('/subscription')}
-              >
-                Subscription
-              </Button>
-              <SignOutButton>
-                <Button variant="danger">
-                  Sign Out
-                </Button>
-              </SignOutButton>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">

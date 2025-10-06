@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import AppHeader from '../components/AppHeader'
 import {
   Layout,
   Card,
@@ -21,11 +22,10 @@ import {
   CheckCircleOutlined,
   CreditCardOutlined,
   RocketOutlined,
-  SettingOutlined,
-  HomeOutlined
+  SettingOutlined
 } from '@ant-design/icons'
 
-const { Header, Content } = Layout
+const { Content } = Layout
 const { Title, Text, Paragraph } = Typography
 
 const API_URL = import.meta.env.VITE_API_URL
@@ -138,26 +138,8 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{
-        background: '#fff',
-        borderBottom: '1px solid #f0f0f0',
-        padding: '0 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <RocketOutlined style={{ color: '#1890ff' }} />
-          Subscription Management
-        </Title>
-        <Button
-          icon={<HomeOutlined />}
-          onClick={() => navigate('/convert')}
-        >
-          Back to Converter
-        </Button>
-      </Header>
+    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <AppHeader />
 
       <Content style={{ padding: '48px 24px', background: '#f5f5f5' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -354,6 +336,6 @@ export default function SubscriptionPage() {
           )}
         </div>
       </Content>
-    </Layout>
+    </div>
   )
 }
