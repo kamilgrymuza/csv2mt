@@ -16,17 +16,19 @@ interface SubscriptionStatus {
   can_convert: boolean
 }
 
-interface ConversionState {
-  status: 'idle' | 'uploading' | 'converting' | 'success' | 'error'
+interface FileConversionStatus {
+  file: File
+  status: 'pending' | 'converting' | 'success' | 'error'
+  progress: number
   message?: string
   downloadUrl?: string
   filename?: string
 }
 
 export default function SimpleConverter() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<FileConversionStatus[]>([])
   const [selectedBank, setSelectedBank] = useState<string>('')
-  const [conversionState, setConversionState] = useState<ConversionState>({ status: 'idle' })
+  const [isConverting, setIsConverting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   const { getToken } = useAuth()
   const navigate = useNavigate()
@@ -56,22 +58,38 @@ export default function SimpleConverter() {
   })
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      processFile(file)
+    const files = event.target.files
+    if (files && files.length > 0) {
+      processFiles(Array.from(files))
     }
   }
 
-  const processFile = (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setConversionState({
-        status: 'error',
-        message: 'Please select a CSV file'
-      })
+  const processFiles = (files: File[]) => {
+    // Filter only CSV files
+    const csvFiles = files.filter(file => file.name.toLowerCase().endsWith('.csv'))
+
+    if (csvFiles.length === 0) {
+      alert('Please select CSV file(s)')
       return
     }
-    setSelectedFile(file)
-    setConversionState({ status: 'idle' })
+
+    // Check if trying to upload more than remaining limit (free tier only)
+    if (subscriptionStatus && !subscriptionStatus.has_active_subscription) {
+      const remaining = (subscriptionStatus.conversions_limit || 0) - subscriptionStatus.conversions_used
+      if (csvFiles.length > remaining) {
+        alert(`You can only convert ${remaining} more file(s) this month. Please select fewer files or upgrade to Premium.`)
+        return
+      }
+    }
+
+    // Add files to list with pending status
+    const fileStatuses: FileConversionStatus[] = csvFiles.map(file => ({
+      file,
+      status: 'pending',
+      progress: 0
+    }))
+
+    setSelectedFiles(fileStatuses)
   }
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -90,34 +108,24 @@ export default function SimpleConverter() {
 
     const files = event.dataTransfer.files
     if (files.length > 0) {
-      processFile(files[0])
+      processFiles(Array.from(files))
     }
   }
 
-  const handleConvert = async () => {
-    if (!selectedFile || !selectedBank) {
-      setConversionState({
-        status: 'error',
-        message: 'Please select both a file and a bank'
-      })
-      return
-    }
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
 
-    // Check if user can convert
-    if (subscriptionStatus && !subscriptionStatus.can_convert) {
-      setConversionState({
-        status: 'error',
-        message: 'You have reached your free conversion limit. Please upgrade to continue.'
-      })
-      return
-    }
-
-    setConversionState({ status: 'converting' })
-
+  const convertSingleFile = async (fileStatus: FileConversionStatus, index: number): Promise<void> => {
     try {
+      // Update status to converting
+      setSelectedFiles(prev => prev.map((f, i) =>
+        i === index ? { ...f, status: 'converting', progress: 50 } : f
+      ))
+
       const token = await getToken()
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      formData.append('file', fileStatus.file)
       formData.append('bank_name', selectedBank)
 
       const response = await axios.post(`${API_URL}/conversion/csv-to-mt940`, formData, {
@@ -131,52 +139,99 @@ export default function SimpleConverter() {
       // Create download URL
       const blob = new Blob([response.data], { type: 'application/octet-stream' })
       const downloadUrl = window.URL.createObjectURL(blob)
-      const filename = selectedFile.name.replace('.csv', '.mt940')
+      const filename = fileStatus.file.name.replace('.csv', '.mt940')
 
-      setConversionState({
-        status: 'success',
-        message: 'Conversion successful!',
-        downloadUrl,
-        filename
-      })
+      // Update status to success
+      setSelectedFiles(prev => prev.map((f, i) =>
+        i === index ? {
+          ...f,
+          status: 'success',
+          progress: 100,
+          downloadUrl,
+          filename,
+          message: 'Converted successfully'
+        } : f
+      ))
 
-      // Refetch subscription status to update usage count
-      refetchStatus()
     } catch (error: any) {
       console.error('Conversion error:', error)
 
-      // Handle 402 Payment Required error
+      let errorMessage = 'Conversion failed'
       if (error.response?.status === 402) {
-        setConversionState({
-          status: 'error',
-          message: 'You have reached your free conversion limit. Please upgrade to continue.'
-        })
-      } else {
-        setConversionState({
-          status: 'error',
-          message: error.response?.data?.detail || 'Conversion failed. Please check your file format.'
-        })
+        errorMessage = 'Limit reached'
+      } else if (error.response?.data?.detail) {
+        errorMessage = typeof error.response.data.detail === 'string'
+          ? error.response.data.detail
+          : 'Conversion failed'
       }
+
+      // Update status to error
+      setSelectedFiles(prev => prev.map((f, i) =>
+        i === index ? {
+          ...f,
+          status: 'error',
+          progress: 0,
+          message: errorMessage
+        } : f
+      ))
     }
   }
 
-  const handleDownload = () => {
-    if (conversionState.downloadUrl && conversionState.filename) {
+  const handleConvertAll = async () => {
+    if (selectedFiles.length === 0 || !selectedBank) {
+      alert('Please select file(s) and a bank')
+      return
+    }
+
+    // Check if user can convert
+    if (subscriptionStatus && !subscriptionStatus.can_convert) {
+      alert('You have reached your free conversion limit. Please upgrade to continue.')
+      return
+    }
+
+    setIsConverting(true)
+
+    // Convert files one by one
+    for (let i = 0; i < selectedFiles.length; i++) {
+      await convertSingleFile(selectedFiles[i], i)
+      // Refetch subscription status after each conversion
+      await refetchStatus()
+    }
+
+    setIsConverting(false)
+  }
+
+  const handleDownload = (fileStatus: FileConversionStatus) => {
+    if (fileStatus.downloadUrl && fileStatus.filename) {
       const link = document.createElement('a')
-      link.href = conversionState.downloadUrl
-      link.download = conversionState.filename
+      link.href = fileStatus.downloadUrl
+      link.download = fileStatus.filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(conversionState.downloadUrl)
     }
   }
 
-  const resetForm = () => {
-    setSelectedFile(null)
-    setSelectedBank('')
-    setConversionState({ status: 'idle' })
+  const handleDownloadAll = () => {
+    selectedFiles.forEach(fileStatus => {
+      if (fileStatus.status === 'success') {
+        handleDownload(fileStatus)
+      }
+    })
   }
+
+  const resetForm = () => {
+    setSelectedFiles([])
+    setSelectedBank('')
+  }
+
+  const remainingConversions = subscriptionStatus && !subscriptionStatus.has_active_subscription
+    ? (subscriptionStatus.conversions_limit || 0) - subscriptionStatus.conversions_used
+    : null
+
+  const successCount = selectedFiles.filter(f => f.status === 'success').length
+  const errorCount = selectedFiles.filter(f => f.status === 'error').length
+  const allComplete = selectedFiles.length > 0 && selectedFiles.every(f => f.status === 'success' || f.status === 'error')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -217,13 +272,13 @@ export default function SimpleConverter() {
                 {/* Bank Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Your Bank <span className="text-red-500">*</span>
+                    Select your bank
                   </label>
                   <select
                     value={selectedBank}
                     onChange={(e) => setSelectedBank(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                    disabled={banksLoading}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border"
+                    disabled={banksLoading || isConverting}
                   >
                     <option value="">
                       {banksLoading ? 'Loading banks...' : 'Choose your bank'}
@@ -239,14 +294,14 @@ export default function SimpleConverter() {
                 {/* File Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload CSV File <span className="text-red-500">*</span>
+                    Drag and drop your files here
                   </label>
                   <div
                     className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
                       isDragOver
                         ? 'border-blue-400 bg-blue-50'
                         : 'border-gray-300'
-                    }`}
+                    } ${isConverting ? 'opacity-50 pointer-events-none' : ''}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -265,78 +320,156 @@ export default function SimpleConverter() {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <div className={`flex text-sm ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
+                      <div className={`flex text-sm justify-center ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
                         <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                          <span>Upload a file</span>
+                          <span>browse from disk</span>
                           <input
                             type="file"
                             className="sr-only"
                             accept=".csv"
+                            multiple
                             onChange={handleFileSelect}
+                            disabled={isConverting}
                           />
                         </label>
-                        <p className="pl-1">or drag and drop</p>
                       </div>
                       <p className={`text-xs ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`}>
-                        {isDragOver ? 'Drop your CSV file here' : 'CSV files only'}
+                        or {isDragOver ? 'Drop your CSV files here' : 'CSV files only'}
                       </p>
-                      {selectedFile && (
-                        <div className="mt-2 p-2 bg-green-50 rounded-md">
-                          <p className="text-sm text-green-700">{selectedFile.name}</p>
-                        </div>
+                      {remainingConversions !== null && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Free conversion for up to {remainingConversions} files. <button className="text-blue-600 underline" onClick={() => navigate('/subscription')}>Register</button> and make a micro-payment for unlimited conversions.
+                        </p>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Status Messages */}
-                {conversionState.message && (
-                  <div className={`rounded-md p-4 ${
-                    conversionState.status === 'success' ? 'bg-green-50 text-green-800' :
-                    conversionState.status === 'error' ? 'bg-red-50 text-red-800' :
-                    'bg-blue-50 text-blue-800'
-                  }`}>
-                    <p className="text-sm">{conversionState.message}</p>
+                {/* File List */}
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedFiles.map((fileStatus, index) => (
+                      <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                        {/* File icon */}
+                        <div className="flex-shrink-0">
+                          {fileStatus.file.type === 'application/pdf' ? (
+                            <svg className="h-8 w-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                            </svg>
+                          ) : (
+                            <svg className="h-8 w-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* File info and progress */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <p className="text-sm font-medium text-gray-900 truncate">{fileStatus.file.name}</p>
+                            {!isConverting && fileStatus.status === 'pending' && (
+                              <button
+                                onClick={() => removeFile(index)}
+                                className="ml-2 text-gray-400 hover:text-gray-600"
+                              >
+                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Progress bar */}
+                          {(fileStatus.status === 'converting' || fileStatus.status === 'success') && (
+                            <div className="mt-1">
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full transition-all ${
+                                    fileStatus.status === 'success' ? 'bg-blue-600' : 'bg-blue-500'
+                                  }`}
+                                  style={{ width: `${fileStatus.progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Status message */}
+                          {fileStatus.message && (
+                            <p className={`text-xs mt-1 ${
+                              fileStatus.status === 'success' ? 'text-green-600' :
+                              fileStatus.status === 'error' ? 'text-red-600' :
+                              'text-gray-500'
+                            }`}>
+                              {fileStatus.message}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Download button */}
+                        {fileStatus.status === 'success' && (
+                          <button
+                            onClick={() => handleDownload(fileStatus)}
+                            className="flex-shrink-0 text-blue-600 hover:text-blue-700"
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex space-x-4">
-                  {conversionState.status === 'success' ? (
-                    <>
-                      <Button
-                        onClick={handleDownload}
-                        variant="primary"
-                      >
-                        Download MT940 File
-                      </Button>
-                      <Button
-                        onClick={resetForm}
-                        variant="secondary"
-                      >
-                        Convert Another File
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={handleConvert}
-                        disabled={!selectedFile || !selectedBank || conversionState.status === 'converting'}
-                        loading={conversionState.status === 'converting'}
-                        variant="primary"
-                      >
-                        {conversionState.status === 'converting' ? 'Converting...' : 'Convert to MT940'}
-                      </Button>
-                      {(selectedFile || selectedBank) && (
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    {allComplete && (
+                      <span>
+                        {successCount} successful, {errorCount} failed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex space-x-4">
+                    {allComplete ? (
+                      <>
+                        {successCount > 0 && (
+                          <Button
+                            onClick={handleDownloadAll}
+                            variant="primary"
+                          >
+                            Download All
+                          </Button>
+                        )}
                         <Button
                           onClick={resetForm}
                           variant="secondary"
                         >
-                          Clear
+                          Convert More Files
                         </Button>
-                      )}
-                    </>
-                  )}
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleConvertAll}
+                          disabled={selectedFiles.length === 0 || !selectedBank || isConverting}
+                          loading={isConverting}
+                          variant="primary"
+                        >
+                          {isConverting ? 'Converting...' : 'Convert Files'}
+                        </Button>
+                        {selectedFiles.length > 0 && (
+                          <Button
+                            onClick={resetForm}
+                            variant="secondary"
+                            disabled={isConverting}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
