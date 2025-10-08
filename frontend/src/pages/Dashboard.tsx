@@ -1,6 +1,6 @@
 import { SignedIn, SignOutButton, useAuth, useUser } from '@clerk/clerk-react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axios from '../lib/axios'
 import {
   Layout,
   Card,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axios from '../lib/axios'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
 import {

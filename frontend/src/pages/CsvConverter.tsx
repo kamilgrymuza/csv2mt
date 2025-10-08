@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axios, { isAxiosError } from '../lib/axios'
 import { SignOutButton } from '@clerk/clerk-react'
 import {
   Layout,
@@ -124,7 +124,7 @@ export default function CsvConverter() {
       console.error('Conversion error:', error)
       let errorMessage = 'Conversion failed. Please check your file format.'
 
-      if (axios.isAxiosError(error) && error.response?.data) {
+      if (isAxiosError(error) && error.response?.data) {
         const reader = new FileReader()
         reader.onload = () => {
           try {
