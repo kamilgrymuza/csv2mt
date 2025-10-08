@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
 // Add response interceptor to capture errors in Sentry
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // Only capture 4xx and 5xx errors
     if (error.response && error.response.status >= 400) {
       // Parse request body if it exists
@@ -31,10 +31,19 @@ axiosInstance.interceptors.response.use(
         }
       }
 
-      // Parse response body if it's a Blob
+      // Parse response body if it's a Blob (convert to JSON if possible)
       let responseData = error.response.data
       if (error.response.data instanceof Blob) {
-        responseData = 'Blob (binary content not captured)'
+        try {
+          const text = await error.response.data.text()
+          try {
+            responseData = JSON.parse(text)
+          } catch {
+            responseData = text
+          }
+        } catch {
+          responseData = 'Blob (unable to read content)'
+        }
       }
 
       Sentry.captureException(error, {
