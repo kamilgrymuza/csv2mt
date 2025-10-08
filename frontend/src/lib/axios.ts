@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
 // Add response interceptor to capture errors in Sentry
 axiosInstance.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
     // Only capture 4xx and 5xx errors
     if (error.response && error.response.status >= 400) {
       // Parse request body if it exists
@@ -32,48 +32,54 @@ axiosInstance.interceptors.response.use(
       }
 
       // Parse response body if it's a Blob (convert to JSON if possible)
-      let responseData = error.response.data
-      if (error.response.data instanceof Blob) {
-        try {
-          const text = await error.response.data.text()
+      // Do this asynchronously without blocking the error rejection
+      const captureError = async () => {
+        let responseData = error.response.data
+        if (error.response.data instanceof Blob) {
           try {
-            responseData = JSON.parse(text)
+            const text = await error.response.data.text()
+            try {
+              responseData = JSON.parse(text)
+            } catch {
+              responseData = text
+            }
           } catch {
-            responseData = text
+            responseData = 'Blob (unable to read content)'
           }
-        } catch {
-          responseData = 'Blob (unable to read content)'
         }
+
+        Sentry.captureException(error, {
+          contexts: {
+            response: {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              headers: error.response.headers,
+              data: responseData,
+            },
+            request: {
+              url: error.config?.url,
+              baseURL: error.config?.baseURL,
+              method: error.config?.method?.toUpperCase(),
+              headers: error.config?.headers,
+              params: error.config?.params,
+              body: requestBody,
+            },
+          },
+          tags: {
+            http_status: error.response.status,
+            http_method: error.config?.method?.toUpperCase(),
+            endpoint: error.config?.url,
+          },
+          fingerprint: [
+            error.config?.method || 'unknown',
+            error.config?.url || 'unknown',
+            String(error.response.status),
+          ],
+        })
       }
 
-      Sentry.captureException(error, {
-        contexts: {
-          response: {
-            status: error.response.status,
-            statusText: error.response.statusText,
-            headers: error.response.headers,
-            data: responseData,
-          },
-          request: {
-            url: error.config?.url,
-            baseURL: error.config?.baseURL,
-            method: error.config?.method?.toUpperCase(),
-            headers: error.config?.headers,
-            params: error.config?.params,
-            body: requestBody,
-          },
-        },
-        tags: {
-          http_status: error.response.status,
-          http_method: error.config?.method?.toUpperCase(),
-          endpoint: error.config?.url,
-        },
-        fingerprint: [
-          error.config?.method || 'unknown',
-          error.config?.url || 'unknown',
-          String(error.response.status),
-        ],
-      })
+      // Fire and forget - don't wait for Sentry capture
+      captureError()
     }
     return Promise.reject(error)
   }
