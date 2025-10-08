@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Application URL for Stripe redirects
     frontend_url: str = "http://localhost:3000"
 
+    # Sentry configuration
+    sentry_dsn: Optional[str] = None
+
     class Config:
         env_file = ".env"
 

@@ -3,6 +3,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import users, health, test, conversion, subscription
 from .database import engine, Base
 from .config import settings
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
+# Initialize Sentry only for staging and production environments
+if settings.environment in ["staging", "production"] and settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        integrations=[
+            StarletteIntegration(transaction_style="endpoint"),
+            FastApiIntegration(transaction_style="endpoint"),
+        ],
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring.
+        # Adjust this value in production.
+        traces_sample_rate=1.0 if settings.environment == "staging" else 0.1,
+        # Set profiles_sample_rate to 1.0 to profile 100% of sampled transactions.
+        # Adjust this value in production.
+        profiles_sample_rate=1.0 if settings.environment == "staging" else 0.1,
+        # Enable request bodies in error reports
+        send_default_pii=False,
+        # Attach tracebacks
+        attach_stacktrace=True,
+    )
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

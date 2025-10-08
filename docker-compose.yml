@@ -34,7 +34,8 @@ services:
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
       FREE_CONVERSION_LIMIT: ${FREE_CONVERSION_LIMIT:-5}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +52,8 @@ services:
     environment:
       VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       VITE_API_URL: http://localhost:8000
+      VITE_ENVIRONMENT: ${ENVIRONMENT:-development}
+      VITE_SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - ./frontend:/app
       - /app/node_modules
