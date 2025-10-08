@@ -120,7 +120,7 @@ export default function CsvConverter() {
         message: 'Conversion Complete',
         description: 'Your MT940 file is ready for download'
       })
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Conversion error:', error)
       let errorMessage = 'Conversion failed. Please check your file format.'
 
@@ -142,7 +142,7 @@ export default function CsvConverter() {
             description: errorMessage
           })
         }
-        reader.readAsText(error.response.data)
+        reader.readAsText(error.response.data as Blob)
       } else {
         setConversionState({
           status: 'error',
