@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
@@ -43,7 +43,6 @@ interface SubscriptionStatus {
 export default function SubscriptionPage() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false)
   const [isCreatingPortal, setIsCreatingPortal] = useState(false)
@@ -86,8 +85,9 @@ export default function SubscriptionPage() {
 
       // Redirect to Stripe Checkout
       window.location.href = response.data.url
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || 'Failed to create checkout session')
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { detail?: string } } }
+      message.error(axiosError.response?.data?.detail || 'Failed to create checkout session')
       setIsCreatingCheckout(false)
     }
   }
@@ -110,8 +110,9 @@ export default function SubscriptionPage() {
 
       // Redirect to Stripe Customer Portal
       window.location.href = response.data.url
-    } catch (error: any) {
-      message.error(error.response?.data?.detail || 'Failed to open subscription management')
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { data?: { detail?: string } } }
+      message.error(axiosError.response?.data?.detail || 'Failed to open subscription management')
       setIsCreatingPortal(false)
     }
   }

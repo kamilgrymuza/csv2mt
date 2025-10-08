@@ -154,16 +154,19 @@ export default function SimpleConverter() {
         } : f
       ))
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Conversion error:', error)
 
       let errorMessage = 'Conversion failed'
-      if (error.response?.status === 402) {
-        errorMessage = 'Limit reached'
-      } else if (error.response?.data?.detail) {
-        errorMessage = typeof error.response.data.detail === 'string'
-          ? error.response.data.detail
-          : 'Conversion failed'
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { detail?: string } } }
+        if (axiosError.response?.status === 402) {
+          errorMessage = 'Limit reached'
+        } else if (axiosError.response?.data?.detail) {
+          errorMessage = typeof axiosError.response.data.detail === 'string'
+            ? axiosError.response.data.detail
+            : 'Conversion failed'
+        }
       }
 
       // Update status to error
