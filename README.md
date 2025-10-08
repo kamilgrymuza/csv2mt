@@ -8,6 +8,10 @@ A full-stack Micro-SaaS application built with FastAPI (Python) backend and Reac
 - **Frontend**: React with TypeScript, Vite, and Tanstack Query
 - **Authentication**: Clerk integration for both frontend and backend
 - **Database**: PostgreSQL with automatic migrations
+- **AI-Powered Parsing**: Claude AI for automatic document transaction extraction
+- **Multi-Format Support**: CSV, PDF, XLS, and XLSX files
+- **Stripe Integration**: Subscription management and payment processing
+- **Error Tracking**: Sentry integration for both frontend and backend
 - **Testing**: Pytest for backend, Vitest for frontend
 - **Development**: Docker Compose for local development
 - **Deployment**: Railway (backend) and Vercel (frontend) ready
@@ -75,12 +79,29 @@ micro-saas-mvp/
    cp frontend/.env.local frontend/.env.local
    ```
 
-3. **Configure Clerk credentials**
+3. **Configure required API keys**
+
+   **Clerk Authentication:**
    - Create a Clerk application at [clerk.com](https://clerk.com)
-   - Update the following files with your Clerk keys:
-     - `.env`: `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`
-     - `backend/.env`: `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`
-     - `frontend/.env.local`: `VITE_CLERK_PUBLISHABLE_KEY`
+   - Add to `.env` and `backend/.env`: `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY`
+   - Add to `frontend/.env.local`: `VITE_CLERK_PUBLISHABLE_KEY`
+
+   **Anthropic Claude AI:**
+   - Get an API key from [console.anthropic.com](https://console.anthropic.com)
+   - Add to `.env` and `backend/.env`: `ANTHROPIC_API_KEY=your-key-here`
+
+   **Stripe (Optional - for subscriptions):**
+   - Create account at [stripe.com](https://stripe.com)
+   - Add to `.env` and `backend/.env`:
+     - `STRIPE_SECRET_KEY`
+     - `STRIPE_PUBLISHABLE_KEY`
+     - `STRIPE_WEBHOOK_SECRET`
+     - `STRIPE_PRICE_ID`
+
+   **Sentry (Optional - for error tracking):**
+   - Create account at [sentry.io](https://sentry.io)
+   - Add to `.env`: `SENTRY_DSN`
+   - Add to `frontend/.env.local`: `VITE_SENTRY_DSN`
 
 ### Development with Docker Compose
 
@@ -209,6 +230,17 @@ npm run test:coverage  # With coverage
 - `GET /users/me` - Get current user (requires authentication)
 - `PUT /users/me` - Update current user (requires authentication)
 - `GET /users/` - List users (requires authentication)
+
+### Conversion
+- `GET /conversion/supported-banks` - List supported banks (legacy)
+- `POST /conversion/csv-to-mt940` - Convert CSV to MT940 (legacy bank-specific)
+- `POST /conversion/auto-convert` - AI-powered auto-conversion (CSV, PDF, XLS, XLSX)
+
+### Subscription
+- `GET /subscription/status` - Get user subscription status
+- `POST /subscription/create-checkout-session` - Create Stripe checkout session
+- `POST /subscription/create-portal-session` - Create Stripe customer portal session
+- `POST /subscription/webhook` - Stripe webhook handler (public endpoint)
 
 ## Authentication Flow
 

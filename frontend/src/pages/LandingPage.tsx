@@ -21,42 +21,36 @@ export default function LandingPage() {
                 Convert Bank Statements to MT940 Instantly
               </h1>
               <p className="text-xl text-gray-600 mb-8">
-                Seamlessly convert your bank statements from CSV or PDF format to the standard MT940 format. Our tool simplifies your financial data processing.
+                Seamlessly convert your bank statements from CSV, PDF, or Excel (XLS/XLSX) format to the standard MT940 format. Our AI-powered tool automatically detects transactions and simplifies your financial data processing.
               </p>
             </div>
 
             {/* Right side - Converter Card */}
             <div className="bg-white rounded-lg shadow-xl p-8">
               <div className="space-y-6">
-                {/* Bank Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select your bank
-                  </label>
-                  <select
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled
-                  >
-                    <option>Alior Bank</option>
-                  </select>
-                </div>
-
                 {/* File Upload Area */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12">
                   <div className="text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    {/* Image icon with + */}
+                    <div className="relative mx-auto w-16 h-16 mb-4">
+                      <svg
+                        className="w-16 h-16 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="1.5"/>
+                        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                        <polyline points="21 15 16 10 5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <div className="absolute -top-1 -right-1 bg-white rounded-full">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" strokeWidth="1.5"/>
+                          <line x1="12" y1="8" x2="12" y2="16" strokeWidth="1.5" strokeLinecap="round"/>
+                          <line x1="8" y1="12" x2="16" y2="12" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    </div>
                     <p className="mt-2 text-base text-gray-900 font-medium">
                       Drag and drop your files here
                     </p>
@@ -93,9 +87,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
             <div className="bg-white rounded-lg p-8 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Multi-Format Support</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">AI-Powered Multi-Format Support</h3>
               <p className="text-gray-600">
-                Convert both CSV and PDF bank statements effortlessly.
+                Convert CSV, PDF, and Excel (XLS/XLSX) bank statements effortlessly using advanced AI technology.
               </p>
             </div>
 

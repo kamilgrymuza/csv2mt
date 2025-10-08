@@ -28,7 +28,6 @@ interface FileConversionStatus {
 
 export default function SimpleConverter() {
   const [selectedFiles, setSelectedFiles] = useState<FileConversionStatus[]>([])
-  const [selectedBank, setSelectedBank] = useState<string>('')
   const [isConverting, setIsConverting] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   const { getToken } = useAuth()
@@ -49,15 +48,6 @@ export default function SimpleConverter() {
     enabled: !!getToken
   })
 
-  // Fetch supported banks
-  const { data: banks, isLoading: banksLoading } = useQuery({
-    queryKey: ['supportedBanks'],
-    queryFn: async () => {
-      const response = await axios.get(`${API_URL}/conversion/supported-banks`)
-      return response.data as string[]
-    }
-  })
-
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (files && files.length > 0) {
@@ -66,17 +56,20 @@ export default function SimpleConverter() {
   }
 
   const processFiles = (files: File[]) => {
-    // Filter only CSV files
-    const csvFiles = files.filter(file => file.name.toLowerCase().endsWith('.csv'))
+    // Filter only supported files (CSV, PDF, XLS, XLSX)
+    const supportedFiles = files.filter(file => {
+      const name = file.name.toLowerCase()
+      return name.endsWith('.csv') || name.endsWith('.pdf') || name.endsWith('.xls') || name.endsWith('.xlsx')
+    })
 
-    if (csvFiles.length === 0) {
-      alert('Please select CSV file(s)')
+    if (supportedFiles.length === 0) {
+      alert('Please select supported file(s): CSV, PDF, XLS, or XLSX')
       return
     }
 
     // Check if user is on free plan - only allow single file
     if (subscriptionStatus && !subscriptionStatus.has_active_subscription) {
-      if (csvFiles.length > 1) {
+      if (supportedFiles.length > 1) {
         alert('Free plan users can only convert one file at a time. Please upgrade to Premium for batch processing.')
         return
       }
@@ -89,7 +82,7 @@ export default function SimpleConverter() {
     }
 
     // Add files to list with pending status
-    const fileStatuses: FileConversionStatus[] = csvFiles.map(file => ({
+    const fileStatuses: FileConversionStatus[] = supportedFiles.map(file => ({
       file,
       status: 'pending',
       progress: 0
@@ -132,9 +125,9 @@ export default function SimpleConverter() {
       const token = await getToken()
       const formData = new FormData()
       formData.append('file', fileStatus.file)
-      formData.append('bank_name', selectedBank)
 
-      const response = await axios.post(`${API_URL}/conversion/csv-to-mt940`, formData, {
+      // Use auto-convert endpoint for AI-powered parsing
+      const response = await axios.post(`${API_URL}/conversion/auto-convert`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
@@ -145,7 +138,13 @@ export default function SimpleConverter() {
       // Create download URL
       const blob = new Blob([response.data], { type: 'application/octet-stream' })
       const downloadUrl = window.URL.createObjectURL(blob)
-      const filename = fileStatus.file.name.replace('.csv', '.mt940')
+
+      // Get the original extension and replace with .mt940
+      const originalName = fileStatus.file.name
+      const extensionIndex = originalName.lastIndexOf('.')
+      const filename = extensionIndex > 0
+        ? originalName.substring(0, extensionIndex) + '.mt940'
+        : originalName + '.mt940'
 
       // Update status to success
       setSelectedFiles(prev => prev.map((f, i) =>
@@ -187,8 +186,8 @@ export default function SimpleConverter() {
   }
 
   const handleConvertAll = async () => {
-    if (selectedFiles.length === 0 || !selectedBank) {
-      alert('Please select file(s) and a bank')
+    if (selectedFiles.length === 0) {
+      alert('Please select file(s)')
       return
     }
 
@@ -231,7 +230,6 @@ export default function SimpleConverter() {
 
   const resetForm = () => {
     setSelectedFiles([])
-    setSelectedBank('')
   }
 
   const remainingConversions = subscriptionStatus && !subscriptionStatus.has_active_subscription
@@ -256,26 +254,12 @@ export default function SimpleConverter() {
                 <CardTitle>File Conversion</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Bank Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select your bank
-                  </label>
-                  <select
-                    value={selectedBank}
-                    onChange={(e) => setSelectedBank(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border"
-                    disabled={banksLoading || isConverting}
-                  >
-                    <option value="">
-                      {banksLoading ? 'Loading banks...' : 'Choose your bank'}
-                    </option>
-                    {banks?.map((bank) => (
-                      <option key={bank} value={bank}>
-                        {bank.charAt(0).toUpperCase() + bank.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                {/* AI-powered conversion notice */}
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>AI-Powered Conversion:</strong> Upload CSV, PDF, XLS, or XLSX files.
+                    Our AI automatically detects transaction data and converts it to MT940 format.
+                  </p>
                 </div>
 
                 {/* File Upload */}
@@ -321,7 +305,7 @@ export default function SimpleConverter() {
                           <input
                             type="file"
                             className="sr-only"
-                            accept=".csv"
+                            accept=".csv,.pdf,.xls,.xlsx"
                             multiple={subscriptionStatus?.has_active_subscription || false}
                             onChange={handleFileSelect}
                             disabled={isConverting}
@@ -347,8 +331,12 @@ export default function SimpleConverter() {
                       <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
                         {/* File icon */}
                         <div className="flex-shrink-0">
-                          {fileStatus.file.type === 'application/pdf' ? (
+                          {fileStatus.file.type === 'application/pdf' || fileStatus.file.name.toLowerCase().endsWith('.pdf') ? (
                             <svg className="h-8 w-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                            </svg>
+                          ) : (fileStatus.file.name.toLowerCase().endsWith('.xls') || fileStatus.file.name.toLowerCase().endsWith('.xlsx')) ? (
+                            <svg className="h-8 w-8 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
                             </svg>
                           ) : (
@@ -448,7 +436,7 @@ export default function SimpleConverter() {
                     <div className="flex flex-col space-y-2">
                       <Button
                         onClick={handleConvertAll}
-                        disabled={selectedFiles.length === 0 || !selectedBank || isConverting}
+                        disabled={selectedFiles.length === 0 || isConverting}
                         loading={isConverting}
                         variant="primary"
                         className="w-full"

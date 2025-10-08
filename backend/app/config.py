@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Sentry configuration
     sentry_dsn: Optional[str] = None
 
+    # Claude AI configuration
+    anthropic_api_key: Optional[str] = None
+
     class Config:
         env_file = ".env"
 
