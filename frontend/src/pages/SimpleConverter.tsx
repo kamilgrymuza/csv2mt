@@ -74,11 +74,16 @@ export default function SimpleConverter() {
       return
     }
 
-    // Check if trying to upload more than remaining limit (free tier only)
+    // Check if user is on free plan - only allow single file
     if (subscriptionStatus && !subscriptionStatus.has_active_subscription) {
+      if (csvFiles.length > 1) {
+        alert('Free plan users can only convert one file at a time. Please upgrade to Premium for batch processing.')
+        return
+      }
+
       const remaining = (subscriptionStatus.conversions_limit || 0) - subscriptionStatus.conversions_used
-      if (csvFiles.length > remaining) {
-        alert(`You can only convert ${remaining} more file(s) this month. Please select fewer files or upgrade to Premium.`)
+      if (remaining <= 0) {
+        alert('You have reached your free conversion limit. Please upgrade to Premium.')
         return
       }
     }
@@ -317,7 +322,7 @@ export default function SimpleConverter() {
                             type="file"
                             className="sr-only"
                             accept=".csv"
-                            multiple
+                            multiple={subscriptionStatus?.has_active_subscription || false}
                             onChange={handleFileSelect}
                             disabled={isConverting}
                           />
@@ -328,7 +333,7 @@ export default function SimpleConverter() {
                       </p>
                       {remainingConversions !== null && (
                         <p className="text-xs text-gray-500 mt-2">
-                          Free conversion for up to {remainingConversions} files. <button className="text-blue-600 underline" onClick={() => navigate('/subscription')}>Register</button> and make a micro-payment for unlimited conversions.
+                          Free plan: {remainingConversions} conversion{remainingConversions !== 1 ? 's' : ''} remaining (one file at a time). <button className="text-blue-600 underline" onClick={() => navigate('/subscription')}>Upgrade to Premium</button> for unlimited batch conversions.
                         </p>
                       )}
                     </div>

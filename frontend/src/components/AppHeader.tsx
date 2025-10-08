@@ -28,12 +28,20 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
     }
   }
 
+  const handleLogoClick = () => {
+    if (window.location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      navigate('/')
+    }
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center h-16">
           <button
-            onClick={() => navigate('/')}
+            onClick={handleLogoClick}
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
           >
             <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
