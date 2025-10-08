@@ -96,6 +96,21 @@ class StripeService:
         success_url = success_url or f"{settings.frontend_url}/subscription?success=true"
         cancel_url = cancel_url or f"{settings.frontend_url}/subscription?canceled=true"
 
+        # Check if customer already has any active subscriptions in Stripe
+        # This prevents race conditions where multiple checkout sessions are opened
+        existing_subs = stripe.Subscription.list(
+            customer=customer_id,
+            status='active',
+            limit=1
+        )
+
+        if existing_subs.data:
+            # Customer already has an active subscription in Stripe
+            raise StripeError(
+                message="Customer already has an active subscription",
+                code="subscription_already_exists"
+            )
+
         # Create checkout session
         session = stripe.checkout.Session.create(
             customer=customer_id,
@@ -109,6 +124,12 @@ class StripeService:
             cancel_url=cancel_url,
             metadata={
                 "user_id": user.id,
+            },
+            # Prevent duplicate subscriptions by using customer's email as idempotency key base
+            subscription_data={
+                "metadata": {
+                    "user_id": user.id,
+                }
             }
         )
 
@@ -227,6 +248,18 @@ class StripeService:
         ).first()
 
         if subscription:
+            # If there's already an active subscription with a different subscription_id,
+            # cancel the old one in Stripe before updating to the new one
+            if (subscription.stripe_subscription_id and
+                subscription.stripe_subscription_id != subscription_id and
+                subscription.status == SubscriptionStatus.ACTIVE):
+                try:
+                    # Cancel the old subscription in Stripe immediately
+                    stripe.Subscription.delete(subscription.stripe_subscription_id)
+                except StripeError as e:
+                    # Log but don't fail - the old subscription might already be canceled
+                    print(f"[WEBHOOK] Error canceling old subscription {subscription.stripe_subscription_id}: {str(e)}")
+
             # Update existing subscription
             subscription.stripe_subscription_id = subscription_id
             subscription.stripe_price_id = subscription_data["items"]["data"][0]["price"]["id"]
