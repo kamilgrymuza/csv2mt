@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignOutButton } from '@clerk/clerk-react'
 import { Button } from './ui/button'
+import { useState, useRef, useEffect } from 'react'
 
 interface AppHeaderProps {
   showNavLinks?: boolean
@@ -8,6 +9,8 @@ interface AppHeaderProps {
 
 export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
   const navigate = useNavigate()
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const scrollToSection = (sectionId: string) => {
     // If we're not on the landing page, navigate there first
@@ -35,6 +38,20 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
       navigate('/')
     }
   }
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -90,17 +107,50 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
               >
                 Converter
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => navigate('/subscription')}
-              >
-                Subscription
-              </Button>
-              <SignOutButton>
-                <Button variant="danger">
-                  Sign Out
-                </Button>
-              </SignOutButton>
+
+              {/* Account dropdown menu */}
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                  className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Account menu"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </button>
+
+                {isAccountMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={() => {
+                        navigate('/subscription')
+                        setIsAccountMenuOpen(false)
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      Subscription
+                    </button>
+                    <SignOutButton>
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </SignOutButton>
+                  </div>
+                )}
+              </div>
             </SignedIn>
           </div>
         </div>
