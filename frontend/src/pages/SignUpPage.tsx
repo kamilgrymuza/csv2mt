@@ -34,6 +34,7 @@ export default function SignUpPage() {
           path="/sign-up"
           signInUrl="/sign-in"
           forceRedirectUrl="/convert"
+          fallbackRedirectUrl="/convert"
           appearance={{
             elements: {
               rootBox: {
