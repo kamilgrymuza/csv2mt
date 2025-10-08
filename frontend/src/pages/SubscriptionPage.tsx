@@ -162,9 +162,9 @@ export default function SubscriptionPage() {
               showIcon
             />
           ) : (
-            <Row gutter={[24, 24]}>
+            <Row gutter={[24, 24]} justify="center">
               {/* Current Plan */}
-              <Col xs={24} lg={12}>
+              <Col xs={24} lg={subscriptionStatus?.has_active_subscription ? 12 : 12}>
                 <Card
                   title="Current Plan"
                   style={{ height: '100%' }}

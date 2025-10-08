@@ -272,9 +272,6 @@ export default function SimpleConverter() {
 
                 {/* File Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Drag and drop your files here
-                  </label>
                   <div
                     className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
                       isDragOver
@@ -286,21 +283,32 @@ export default function SimpleConverter() {
                     onDrop={handleDrop}
                   >
                     <div className="space-y-1 text-center">
-                      <svg
-                        className={`mx-auto h-12 w-12 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`}
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                      >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <div className={`flex text-sm justify-center ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
-                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                      {/* Image icon with + */}
+                      <div className="relative mx-auto w-16 h-16 mb-4">
+                        <svg
+                          className={`w-16 h-16 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" strokeWidth="1.5"/>
+                          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                          <polyline points="21 15 16 10 5 21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <div className="absolute -top-1 -right-1 bg-white rounded-full">
+                          <svg className={`w-6 h-6 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" strokeWidth="1.5"/>
+                            <line x1="12" y1="8" x2="12" y2="16" strokeWidth="1.5" strokeLinecap="round"/>
+                            <line x1="8" y1="12" x2="16" y2="12" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                      <p className={`text-base font-medium mb-1 ${isDragOver ? 'text-blue-600' : 'text-gray-900'}`}>
+                        Drag and drop your files here
+                      </p>
+                      <div className={`text-sm ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
+                        <span>or </span>
+                        <label className="relative cursor-pointer font-medium text-blue-600 hover:text-blue-500">
                           <span>browse from disk</span>
                           <input
                             type="file"
@@ -312,8 +320,8 @@ export default function SimpleConverter() {
                           />
                         </label>
                       </div>
-                      <p className={`text-xs ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`}>
-                        or {isDragOver ? 'Drop your CSV files here' : 'CSV files only'}
+                      <p className={`text-xs mt-1 ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`}>
+                        {isDragOver ? 'Drop your files here' : ''}
                       </p>
                       {remainingConversions !== null && (
                         <p className="text-xs text-gray-500 mt-2">
@@ -401,54 +409,56 @@ export default function SimpleConverter() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    {allComplete && (
+                <div className="space-y-3">
+                  {allComplete && (
+                    <div className="text-sm text-gray-600 text-center">
                       <span>
                         {successCount} successful, {errorCount} failed
                       </span>
-                    )}
-                  </div>
-                  <div className="flex space-x-4">
-                    {allComplete ? (
-                      <>
-                        {successCount > 0 && (
-                          <Button
-                            onClick={handleDownloadAll}
-                            variant="primary"
-                          >
-                            Download All
-                          </Button>
-                        )}
+                    </div>
+                  )}
+                  {allComplete ? (
+                    <div className="flex flex-col space-y-2">
+                      {successCount > 0 && (
+                        <Button
+                          onClick={handleDownloadAll}
+                          variant="primary"
+                          className="w-full"
+                        >
+                          Download All
+                        </Button>
+                      )}
+                      <Button
+                        onClick={resetForm}
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        Convert More Files
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col space-y-2">
+                      <Button
+                        onClick={handleConvertAll}
+                        disabled={selectedFiles.length === 0 || !selectedBank || isConverting}
+                        loading={isConverting}
+                        variant="primary"
+                        className="w-full"
+                      >
+                        {isConverting ? 'Converting...' : 'Convert Files'}
+                      </Button>
+                      {selectedFiles.length > 0 && (
                         <Button
                           onClick={resetForm}
                           variant="secondary"
+                          disabled={isConverting}
+                          className="w-full"
                         >
-                          Convert More Files
+                          Clear
                         </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={handleConvertAll}
-                          disabled={selectedFiles.length === 0 || !selectedBank || isConverting}
-                          loading={isConverting}
-                          variant="primary"
-                        >
-                          {isConverting ? 'Converting...' : 'Convert Files'}
-                        </Button>
-                        {selectedFiles.length > 0 && (
-                          <Button
-                            onClick={resetForm}
-                            variant="secondary"
-                            disabled={isConverting}
-                          >
-                            Clear
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -520,20 +530,6 @@ export default function SimpleConverter() {
                 </CardContent>
               </Card>
             )}
-
-            {/* About MT940 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About MT940 Format</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  MT940 is an international standard for electronic bank statements.
-                  This converter transforms your bank's CSV export into the standardized
-                  MT940 format for use with accounting software and financial systems.
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
