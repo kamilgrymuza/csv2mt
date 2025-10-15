@@ -8,6 +8,49 @@
     "goPremium": "Go Premium",
     "registerForPremium": "Register for Premium"
   },
+  "header": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "testimonials": "Testimonials",
+    "logIn": "Log in",
+    "converter": "Converter",
+    "subscription": "Subscription",
+    "signOut": "Sign Out"
+  },
+  "converter": {
+    "title": "File Conversion",
+    "aiNotice": "AI-Powered Conversion: Upload CSV, PDF, XLS, or XLSX files. Our AI automatically detects transaction data and converts it to MT940 format.",
+    "dragDropTitle": "Drag and drop your files here",
+    "browseFromDisk": "browse from disk",
+    "dropHere": "Drop your files here",
+    "freePlanNotice": "Free plan: {{remaining}} conversion{{s}} remaining (one file at a time).",
+    "upgradeToPremium": "Upgrade to Premium",
+    "unlimitedBatchConversions": "for unlimited batch conversions.",
+    "convertedSuccessfully": "Converted successfully",
+    "conversionFailed": "Conversion failed",
+    "limitReached": "Limit reached",
+    "successful": "successful",
+    "failed": "failed",
+    "downloadAll": "Download All",
+    "convertMoreFiles": "Convert More Files",
+    "converting": "Converting...",
+    "convertFiles": "Convert Files",
+    "clear": "Clear",
+    "freePlan": "Free Plan",
+    "premiumPlan": "Premium Plan",
+    "unlimitedConversions": "✓ Unlimited Conversions",
+    "unlimitedAccess": "You have unlimited access to all features",
+    "conversionsUsed": "Conversions used",
+    "monthlyLimitReached": "You've reached your monthly limit",
+    "upgradeToPremiumPrice": "Upgrade to Premium - $4.99/mo",
+    "alerts": {
+      "unsupportedFiles": "Please select supported file(s): CSV, PDF, XLS, or XLSX",
+      "freePlanSingleFile": "Free plan users can only convert one file at a time. Please upgrade to Premium for batch processing.",
+      "freeLimitReached": "You have reached your free conversion limit. Please upgrade to Premium.",
+      "selectFiles": "Please select file(s)",
+      "limitReachedUpgrade": "You have reached your free conversion limit. Please upgrade to continue."
+    }
+  },
   "landing": {
     "hero": {
       "title": "Convert Bank Statements to MT940 Instantly",

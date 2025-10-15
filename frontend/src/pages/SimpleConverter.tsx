@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from '../lib/axios'
 import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '../components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import AppHeader from '../components/AppHeader'
@@ -32,6 +33,13 @@ export default function SimpleConverter() {
   const [isDragOver, setIsDragOver] = useState(false)
   const { getToken } = useAuth()
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
+
+  // Helper to get current language and construct language-aware paths
+  const getLangPath = (path: string) => {
+    const lang = i18n.language || 'en'
+    return `/${lang}${path}`
+  }
 
   // Fetch subscription status
   const { data: subscriptionStatus, refetch: refetchStatus } = useQuery<SubscriptionStatus>({
@@ -63,20 +71,20 @@ export default function SimpleConverter() {
     })
 
     if (supportedFiles.length === 0) {
-      alert('Please select supported file(s): CSV, PDF, XLS, or XLSX')
+      alert(t('converter.alerts.unsupportedFiles'))
       return
     }
 
     // Check if user is on free plan - only allow single file
     if (subscriptionStatus && !subscriptionStatus.has_active_subscription) {
       if (supportedFiles.length > 1) {
-        alert('Free plan users can only convert one file at a time. Please upgrade to Premium for batch processing.')
+        alert(t('converter.alerts.freePlanSingleFile'))
         return
       }
 
       const remaining = (subscriptionStatus.conversions_limit || 0) - subscriptionStatus.conversions_used
       if (remaining <= 0) {
-        alert('You have reached your free conversion limit. Please upgrade to Premium.')
+        alert(t('converter.alerts.freeLimitReached'))
         return
       }
     }
@@ -154,22 +162,22 @@ export default function SimpleConverter() {
           progress: 100,
           downloadUrl,
           filename,
-          message: 'Converted successfully'
+          message: t('converter.convertedSuccessfully')
         } : f
       ))
 
     } catch (error: unknown) {
       console.error('Conversion error:', error)
 
-      let errorMessage = 'Conversion failed'
+      let errorMessage = t('converter.conversionFailed')
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number; data?: { detail?: string } } }
         if (axiosError.response?.status === 402) {
-          errorMessage = 'Limit reached'
+          errorMessage = t('converter.limitReached')
         } else if (axiosError.response?.data?.detail) {
           errorMessage = typeof axiosError.response.data.detail === 'string'
             ? axiosError.response.data.detail
-            : 'Conversion failed'
+            : t('converter.conversionFailed')
         }
       }
 
@@ -187,13 +195,13 @@ export default function SimpleConverter() {
 
   const handleConvertAll = async () => {
     if (selectedFiles.length === 0) {
-      alert('Please select file(s)')
+      alert(t('converter.alerts.selectFiles'))
       return
     }
 
     // Check if user can convert
     if (subscriptionStatus && !subscriptionStatus.can_convert) {
-      alert('You have reached your free conversion limit. Please upgrade to continue.')
+      alert(t('converter.alerts.limitReachedUpgrade'))
       return
     }
 
@@ -251,14 +259,13 @@ export default function SimpleConverter() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>File Conversion</CardTitle>
+                <CardTitle>{t('converter.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* AI-powered conversion notice */}
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>AI-Powered Conversion:</strong> Upload CSV, PDF, XLS, or XLSX files.
-                    Our AI automatically detects transaction data and converts it to MT940 format.
+                    {t('converter.aiNotice')}
                   </p>
                 </div>
 
@@ -296,12 +303,12 @@ export default function SimpleConverter() {
                         </div>
                       </div>
                       <p className={`text-base font-medium mb-1 ${isDragOver ? 'text-blue-600' : 'text-gray-900'}`}>
-                        Drag and drop your files here
+                        {t('converter.dragDropTitle')}
                       </p>
                       <div className={`text-sm ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
                         <span>or </span>
                         <label className="relative cursor-pointer font-medium text-blue-600 hover:text-blue-500">
-                          <span>browse from disk</span>
+                          <span>{t('converter.browseFromDisk')}</span>
                           <input
                             type="file"
                             className="sr-only"
@@ -313,11 +320,11 @@ export default function SimpleConverter() {
                         </label>
                       </div>
                       <p className={`text-xs mt-1 ${isDragOver ? 'text-blue-500' : 'text-gray-500'}`}>
-                        {isDragOver ? 'Drop your files here' : ''}
+                        {isDragOver ? t('converter.dropHere') : ''}
                       </p>
                       {remainingConversions !== null && (
                         <p className="text-xs text-gray-500 mt-2">
-                          Free plan: {remainingConversions} conversion{remainingConversions !== 1 ? 's' : ''} remaining (one file at a time). <button className="text-blue-600 underline" onClick={() => navigate('/subscription')}>Upgrade to Premium</button> for unlimited batch conversions.
+                          {t('converter.freePlanNotice', { remaining: remainingConversions, s: remainingConversions !== 1 ? 's' : '' })} <button className="text-blue-600 underline" onClick={() => navigate(getLangPath('/subscription'))}>{t('converter.upgradeToPremium')}</button> {t('converter.unlimitedBatchConversions')}
                         </p>
                       )}
                     </div>
@@ -409,7 +416,7 @@ export default function SimpleConverter() {
                   {allComplete && (
                     <div className="text-sm text-gray-600 text-center">
                       <span>
-                        {successCount} successful, {errorCount} failed
+                        {successCount} {t('converter.successful')}, {errorCount} {t('converter.failed')}
                       </span>
                     </div>
                   )}
@@ -421,7 +428,7 @@ export default function SimpleConverter() {
                           variant="primary"
                           className="w-full"
                         >
-                          Download All
+                          {t('converter.downloadAll')}
                         </Button>
                       )}
                       <Button
@@ -429,7 +436,7 @@ export default function SimpleConverter() {
                         variant="secondary"
                         className="w-full"
                       >
-                        Convert More Files
+                        {t('converter.convertMoreFiles')}
                       </Button>
                     </div>
                   ) : (
@@ -441,7 +448,7 @@ export default function SimpleConverter() {
                         variant="primary"
                         className="w-full"
                       >
-                        {isConverting ? 'Converting...' : 'Convert Files'}
+                        {isConverting ? t('converter.converting') : t('converter.convertFiles')}
                       </Button>
                       {selectedFiles.length > 0 && (
                         <Button
@@ -450,7 +457,7 @@ export default function SimpleConverter() {
                           disabled={isConverting}
                           className="w-full"
                         >
-                          Clear
+                          {t('converter.clear')}
                         </Button>
                       )}
                     </div>
@@ -467,23 +474,23 @@ export default function SimpleConverter() {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {subscriptionStatus.has_active_subscription ? 'Premium Plan' : 'Free Plan'}
+                    {subscriptionStatus.has_active_subscription ? t('converter.premiumPlan') : t('converter.freePlan')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {subscriptionStatus.has_active_subscription ? (
                       <div className="text-center py-4">
-                        <div className="text-green-600 font-semibold mb-2">✓ Unlimited Conversions</div>
+                        <div className="text-green-600 font-semibold mb-2">{t('converter.unlimitedConversions')}</div>
                         <p className="text-sm text-gray-600">
-                          You have unlimited access to all features
+                          {t('converter.unlimitedAccess')}
                         </p>
                       </div>
                     ) : (
                       <>
                         <div>
                           <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-600">Conversions used</span>
+                            <span className="text-gray-600">{t('converter.conversionsUsed')}</span>
                             <span className="font-medium">
                               {subscriptionStatus.conversions_used} / {subscriptionStatus.conversions_limit}
                             </span>
@@ -509,16 +516,16 @@ export default function SimpleConverter() {
                         {!subscriptionStatus.can_convert && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                             <p className="text-sm text-yellow-800 mb-2">
-                              You've reached your monthly limit
+                              {t('converter.monthlyLimitReached')}
                             </p>
                           </div>
                         )}
                         <Button
                           variant="primary"
-                          onClick={() => navigate('/subscription')}
+                          onClick={() => navigate(getLangPath('/subscription'))}
                           className="w-full"
                         >
-                          Upgrade to Premium - $4.99/mo
+                          {t('converter.upgradeToPremiumPrice')}
                         </Button>
                       </>
                     )}

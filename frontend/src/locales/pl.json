@@ -8,6 +8,49 @@
     "goPremium": "Przejdź na Premium",
     "registerForPremium": "Zarejestruj się Premium"
   },
+  "header": {
+    "features": "Funkcje",
+    "pricing": "Cennik",
+    "testimonials": "Opinie",
+    "logIn": "Zaloguj się",
+    "converter": "Konwerter",
+    "subscription": "Subskrypcja",
+    "signOut": "Wyloguj się"
+  },
+  "converter": {
+    "title": "Konwersja plików",
+    "aiNotice": "Konwersja oparta na AI: Prześlij pliki CSV, PDF, XLS lub XLSX. Nasza sztuczna inteligencja automatycznie wykrywa dane transakcji i konwertuje je do formatu MT940.",
+    "dragDropTitle": "Przeciągnij i upuść pliki tutaj",
+    "browseFromDisk": "przeglądaj dysk",
+    "dropHere": "Upuść pliki tutaj",
+    "freePlanNotice": "Plan darmowy: pozostało {{remaining}} konwersj{{s}} (po jednym pliku na raz).",
+    "upgradeToPremium": "Przejdź na Premium",
+    "unlimitedBatchConversions": "aby uzyskać nieograniczone konwersje wsadowe.",
+    "convertedSuccessfully": "Skonwertowano pomyślnie",
+    "conversionFailed": "Konwersja nie powiodła się",
+    "limitReached": "Osiągnięto limit",
+    "successful": "udanych",
+    "failed": "nieudanych",
+    "downloadAll": "Pobierz wszystko",
+    "convertMoreFiles": "Konwertuj więcej plików",
+    "converting": "Konwertowanie...",
+    "convertFiles": "Konwertuj pliki",
+    "clear": "Wyczyść",
+    "freePlan": "Plan darmowy",
+    "premiumPlan": "Plan Premium",
+    "unlimitedConversions": "✓ Nieograniczone konwersje",
+    "unlimitedAccess": "Masz nieograniczony dostęp do wszystkich funkcji",
+    "conversionsUsed": "Wykorzystane konwersje",
+    "monthlyLimitReached": "Osiągnięto miesięczny limit",
+    "upgradeToPremiumPrice": "Przejdź na Premium - 19,99 zł/mies.",
+    "alerts": {
+      "unsupportedFiles": "Proszę wybrać obsługiwane pliki: CSV, PDF, XLS lub XLSX",
+      "freePlanSingleFile": "Użytkownicy planu darmowego mogą konwertować tylko jeden plik na raz. Przejdź na Premium, aby korzystać z przetwarzania wsadowego.",
+      "freeLimitReached": "Osiągnięto limit darmowych konwersji. Przejdź na Premium.",
+      "selectFiles": "Proszę wybrać plik(i)",
+      "limitReachedUpgrade": "Osiągnięto limit darmowych konwersji. Przejdź na wyższą wersję, aby kontynuować."
+    }
+  },
   "landing": {
     "hero": {
       "title": "Konwertuj wyciągi bankowe do formatu MT940 natychmiast",

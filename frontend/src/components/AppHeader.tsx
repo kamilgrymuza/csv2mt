@@ -11,7 +11,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
   const navigate = useNavigate()
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -91,19 +91,19 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                   onClick={() => scrollToSection('features')}
                   className="text-gray-600 hover:text-gray-900 font-medium"
                 >
-                  Features
+                  {t('header.features')}
                 </button>
                 <button
                   onClick={() => scrollToSection('pricing')}
                   className="text-gray-600 hover:text-gray-900 font-medium"
                 >
-                  Pricing
+                  {t('header.pricing')}
                 </button>
                 <button
                   onClick={() => scrollToSection('testimonials')}
                   className="text-gray-600 hover:text-gray-900 font-medium"
                 >
-                  Testimonials
+                  {t('header.testimonials')}
                 </button>
               </>
             )}
@@ -113,7 +113,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                 variant="primary"
                 onClick={() => navigate(getLangPath('/sign-in'))}
               >
-                Log in
+                {t('header.logIn')}
               </Button>
             </SignedOut>
 
@@ -122,7 +122,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                 variant="secondary"
                 onClick={() => navigate(getLangPath('/convert'))}
               >
-                Converter
+                {t('header.converter')}
               </Button>
             </SignedIn>
 
@@ -161,13 +161,13 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
-                      Subscription
+                      {t('header.subscription')}
                     </button>
                     <SignOutButton>
                       <button
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors"
                       >
-                        Sign Out
+                        {t('header.signOut')}
                       </button>
                     </SignOutButton>
                   </div>
