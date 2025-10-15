@@ -106,10 +106,28 @@ const noscriptContent = `
 // Insert noscript content right after opening body tag
 html = html.replace(/<body>/, `<body>\n${noscriptContent}`)
 
+// Update canonical URL to point to /en/ (default language)
+html = html.replace(
+  /<link rel="canonical" href="https:\/\/csv2mt\.com\/" \/>/,
+  '<link rel="canonical" href="https://csv2mt.com/en/" />'
+)
+
+// Add hreflang tags for language versions
+const hreflangTags = `
+    <!-- Language alternates -->
+    <link rel="alternate" hreflang="en" href="https://csv2mt.com/en/" />
+    <link rel="alternate" hreflang="pl" href="https://csv2mt.com/pl/" />
+    <link rel="alternate" hreflang="x-default" href="https://csv2mt.com/en/" />`
+
+// Insert hreflang tags before closing </head>
+html = html.replace(/<\/head>/, `${hreflangTags}\n  </head>`)
+
 // Write back
 fs.writeFileSync(indexHtmlPath, html)
 
 console.log('✅ SEO enhancement complete!')
 console.log('   - Added comprehensive noscript content')
+console.log('   - Updated canonical URL to /en/ (default language)')
+console.log('   - Added hreflang tags (en, pl, x-default)')
 console.log('   - Landing page info visible to search engines')
 console.log('   - HTML ready for Vercel deployment')
