@@ -108,9 +108,6 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
               </>
             )}
 
-            {/* Language Switcher */}
-            <LanguageSwitcher />
-
             <SignedOut>
               <Button
                 variant="primary"
@@ -127,7 +124,12 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
               >
                 Converter
               </Button>
+            </SignedIn>
 
+            {/* Language Switcher - positioned next to user menu */}
+            <LanguageSwitcher />
+
+            <SignedIn>
               {/* Account dropdown menu */}
               <div className="relative" ref={menuRef}>
                 <button
