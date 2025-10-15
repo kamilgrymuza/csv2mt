@@ -27,61 +27,42 @@ export default function LanguageSwitcher() {
   return (
     <button
       onClick={() => changeLanguage(targetLang)}
-      className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
+      className="flex items-center justify-center hover:opacity-80 transition-opacity"
       aria-label={ariaLabel}
       title={ariaLabel}
     >
       {targetLang === 'en' ? (
         // US Flag (switch to English)
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
-          <g clipPath="url(#clip0)">
-            <rect width="24" height="24" rx="12" fill="#B22234"/>
-            <path d="M0 2.769h24M0 5.538h24M0 8.308h24M0 11.077h24M0 13.846h24M0 16.615h24M0 19.385h24M0 22.154h24" stroke="white" strokeWidth="1.846"/>
-            <rect width="10.154" height="11.077" fill="#3C3B6E"/>
-            <g fill="white">
-              <circle cx="2.077" cy="2.077" r="0.462"/>
-              <circle cx="4.154" cy="2.077" r="0.462"/>
-              <circle cx="6.231" cy="2.077" r="0.462"/>
-              <circle cx="8.308" cy="2.077" r="0.462"/>
-              <circle cx="3.115" cy="3.462" r="0.462"/>
-              <circle cx="5.192" cy="3.462" r="0.462"/>
-              <circle cx="7.269" cy="3.462" r="0.462"/>
-              <circle cx="2.077" cy="4.846" r="0.462"/>
-              <circle cx="4.154" cy="4.846" r="0.462"/>
-              <circle cx="6.231" cy="4.846" r="0.462"/>
-              <circle cx="8.308" cy="4.846" r="0.462"/>
-              <circle cx="3.115" cy="6.231" r="0.462"/>
-              <circle cx="5.192" cy="6.231" r="0.462"/>
-              <circle cx="7.269" cy="6.231" r="0.462"/>
-              <circle cx="2.077" cy="7.615" r="0.462"/>
-              <circle cx="4.154" cy="7.615" r="0.462"/>
-              <circle cx="6.231" cy="7.615" r="0.462"/>
-              <circle cx="8.308" cy="7.615" r="0.462"/>
-              <circle cx="3.115" cy="9" r="0.462"/>
-              <circle cx="5.192" cy="9" r="0.462"/>
-              <circle cx="7.269" cy="9" r="0.462"/>
-            </g>
+        <svg className="w-8 h-6 border border-gray-300 rounded" viewBox="0 0 32 24" fill="none">
+          <rect width="32" height="24" fill="#B22234" rx="2"/>
+          <path d="M0 2.769h32M0 5.538h32M0 8.308h32M0 11.077h32M0 13.846h32M0 16.615h32M0 19.385h32M0 22.154h32" stroke="white" strokeWidth="1.846"/>
+          <rect width="13.538" height="11.077" fill="#3C3B6E" rx="1"/>
+          <g fill="white">
+            <circle cx="2.769" cy="2.077" r="0.5"/>
+            <circle cx="5.538" cy="2.077" r="0.5"/>
+            <circle cx="8.308" cy="2.077" r="0.5"/>
+            <circle cx="11.077" cy="2.077" r="0.5"/>
+            <circle cx="4.154" cy="3.692" r="0.5"/>
+            <circle cx="6.923" cy="3.692" r="0.5"/>
+            <circle cx="9.692" cy="3.692" r="0.5"/>
+            <circle cx="2.769" cy="5.308" r="0.5"/>
+            <circle cx="5.538" cy="5.308" r="0.5"/>
+            <circle cx="8.308" cy="5.308" r="0.5"/>
+            <circle cx="11.077" cy="5.308" r="0.5"/>
+            <circle cx="4.154" cy="6.923" r="0.5"/>
+            <circle cx="6.923" cy="6.923" r="0.5"/>
+            <circle cx="9.692" cy="6.923" r="0.5"/>
+            <circle cx="2.769" cy="8.538" r="0.5"/>
+            <circle cx="5.538" cy="8.538" r="0.5"/>
+            <circle cx="8.308" cy="8.538" r="0.5"/>
+            <circle cx="11.077" cy="8.538" r="0.5"/>
           </g>
-          <defs>
-            <clipPath id="clip0">
-              <rect width="24" height="24" rx="12" fill="white"/>
-            </clipPath>
-          </defs>
         </svg>
       ) : (
         // Polish Flag (switch to Polish)
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
-          <g clipPath="url(#clip1)">
-            <circle cx="12" cy="12" r="12" fill="white"/>
-            <path d="M12 12C12 17.5228 12 24 12 24C18.6274 24 24 18.6274 24 12H12Z" fill="#DC143C"/>
-            <path d="M12 12C12 17.5228 12 24 12 24C5.37258 24 0 18.6274 0 12H12Z" fill="#DC143C"/>
-            <rect y="12" width="24" height="12" fill="#DC143C"/>
-          </g>
-          <defs>
-            <clipPath id="clip1">
-              <rect width="24" height="24" rx="12" fill="white"/>
-            </clipPath>
-          </defs>
+        <svg className="w-8 h-6 border border-gray-300 rounded" viewBox="0 0 32 24" fill="none">
+          <rect width="32" height="24" fill="white" rx="2"/>
+          <rect y="12" width="32" height="12" fill="#DC143C"/>
         </svg>
       )}
     </button>
