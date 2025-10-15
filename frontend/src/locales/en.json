@@ -1,0 +1,94 @@
+{
+  "common": {
+    "appName": "CSV2MT",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "getStarted": "Get Started",
+    "convertFiles": "Convert Files",
+    "goPremium": "Go Premium",
+    "registerForPremium": "Register for Premium"
+  },
+  "landing": {
+    "hero": {
+      "title": "Convert Bank Statements to MT940 Instantly",
+      "subtitle": "Seamlessly convert your bank statements from CSV, PDF, or Excel (XLS/XLSX) format to the standard MT940 format. Our AI-powered tool automatically detects transactions and simplifies your financial data processing.",
+      "dragDrop": "Drag and drop your files here",
+      "browseFromDisk": "or <1>browse from disk</1>"
+    },
+    "features": {
+      "title": "Key Features",
+      "subtitle": "Our platform is designed to make your financial data management as simple and efficient as possible.",
+      "multiFormat": {
+        "title": "AI-Powered Multi-Format Support",
+        "description": "Convert CSV, PDF, and Excel (XLS/XLSX) bank statements effortlessly using advanced AI technology."
+      },
+      "secure": {
+        "title": "Secure & Private",
+        "description": "Your data is processed securely and never stored on our servers."
+      },
+      "batch": {
+        "title": "Batch Conversion",
+        "description": "Convert multiple files at once with our premium plan."
+      }
+    },
+    "pricing": {
+      "title": "Simple, Transparent Pricing",
+      "subtitle": "Choose the plan that's right for you. Get started for free.",
+      "free": {
+        "title": "Free",
+        "subtitle": "Perfect for occasional conversions.",
+        "price": "$0",
+        "period": "/ month",
+        "features": {
+          "conversions": "Up to 5 conversions",
+          "support": "Basic support"
+        }
+      },
+      "premium": {
+        "title": "Premium",
+        "badge": "MOST POPULAR",
+        "subtitle": "For professionals and businesses.",
+        "price": "$4.99",
+        "period": "/ month",
+        "features": {
+          "conversions": "Unlimited conversions",
+          "batch": "Batch processing",
+          "support": "Priority support"
+        }
+      }
+    },
+    "testimonials": {
+      "title": "Loved by Accountants & Businesses",
+      "subtitle": "Don't just take our word for it. Here's what our users say.",
+      "testimonial1": {
+        "quote": "This tool is a lifesaver! It saves me hours of manual data entry every month. Highly recommended for any accountant.",
+        "name": "Jane Doe",
+        "role": "Certified Accountant"
+      },
+      "testimonial2": {
+        "quote": "Simple, fast, and does exactly what it promises. The premium plan is a no-brainer for the price.",
+        "name": "John Smith",
+        "role": "Small Business Owner"
+      },
+      "testimonial3": {
+        "quote": "I was skeptical at first, but the accuracy of the PDF conversion is impressive. It handles complex statements with ease.",
+        "name": "Emily White",
+        "role": "Freelance Bookkeeper"
+      }
+    },
+    "cta": {
+      "title": "Ready for unlimited conversions?",
+      "subtitle": "Register now and unlock unlimited file conversions, batch processing, and priority support with our premium plan."
+    },
+    "footer": {
+      "copyright": "© 2024 Statement Converter. All rights reserved.",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service"
+    }
+  },
+  "seo": {
+    "title": "CSV2MT - Convert Bank Statements to MT940 Format Instantly",
+    "description": "Seamlessly convert your bank statements from CSV, PDF, or Excel to standard MT940 format. AI-powered tool for instant, secure financial data processing.",
+    "keywords": "MT940, bank statement converter, CSV to MT940, PDF to MT940, Excel to MT940, financial data, bank statements, accounting software, AI converter"
+  }
+}

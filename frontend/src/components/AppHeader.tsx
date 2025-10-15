@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignOutButton } from '@clerk/clerk-react'
 import { Button } from './ui/button'
 import { useState, useRef, useEffect } from 'react'
+import LanguageSwitcher from './LanguageSwitcher'
 
 interface AppHeaderProps {
   showNavLinks?: boolean
@@ -90,6 +91,9 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                 </button>
               </>
             )}
+
+            {/* Language Switcher */}
+            <LanguageSwitcher />
 
             <SignedOut>
               <Button

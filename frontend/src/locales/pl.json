@@ -1,0 +1,94 @@
+{
+  "common": {
+    "appName": "CSV2MT",
+    "signIn": "Zaloguj się",
+    "signUp": "Zarejestruj się",
+    "getStarted": "Rozpocznij",
+    "convertFiles": "Konwertuj pliki",
+    "goPremium": "Przejdź na Premium",
+    "registerForPremium": "Zarejestruj się Premium"
+  },
+  "landing": {
+    "hero": {
+      "title": "Konwertuj wyciągi bankowe do formatu MT940 natychmiast",
+      "subtitle": "Bezproblemowo konwertuj swoje wyciągi bankowe z formatów CSV, PDF lub Excel (XLS/XLSX) do standardowego formatu MT940. Nasze narzędzie oparte na sztucznej inteligencji automatycznie wykrywa transakcje i upraszcza przetwarzanie danych finansowych.",
+      "dragDrop": "Przeciągnij i upuść pliki tutaj",
+      "browseFromDisk": "lub <1>przeglądaj dysk</1>"
+    },
+    "features": {
+      "title": "Główne funkcje",
+      "subtitle": "Nasza platforma została zaprojektowana, aby zarządzanie danymi finansowymi było jak najprostsze i najbardziej wydajne.",
+      "multiFormat": {
+        "title": "Wsparcie wielu formatów oparte na AI",
+        "description": "Konwertuj wyciągi bankowe CSV, PDF i Excel (XLS/XLSX) bez wysiłku, korzystając z zaawansowanej technologii AI."
+      },
+      "secure": {
+        "title": "Bezpieczne i prywatne",
+        "description": "Twoje dane są przetwarzane bezpiecznie i nigdy nie są przechowywane na naszych serwerach."
+      },
+      "batch": {
+        "title": "Konwersja wsadowa",
+        "description": "Konwertuj wiele plików jednocześnie dzięki naszemu planowi premium."
+      }
+    },
+    "pricing": {
+      "title": "Prosty, przejrzysty cennik",
+      "subtitle": "Wybierz plan odpowiedni dla Ciebie. Zacznij za darmo.",
+      "free": {
+        "title": "Darmowy",
+        "subtitle": "Idealny do okazjonalnych konwersji.",
+        "price": "0 zł",
+        "period": "/ miesiąc",
+        "features": {
+          "conversions": "Do 5 konwersji",
+          "support": "Podstawowe wsparcie"
+        }
+      },
+      "premium": {
+        "title": "Premium",
+        "badge": "NAJPOPULARNIEJSZY",
+        "subtitle": "Dla profesjonalistów i firm.",
+        "price": "19,99 zł",
+        "period": "/ miesiąc",
+        "features": {
+          "conversions": "Nieograniczone konwersje",
+          "batch": "Przetwarzanie wsadowe",
+          "support": "Priorytetowe wsparcie"
+        }
+      }
+    },
+    "testimonials": {
+      "title": "Zaufali nam księgowi i firmy",
+      "subtitle": "Nie tylko my tak mówimy. Oto opinie naszych użytkowników.",
+      "testimonial1": {
+        "quote": "To narzędzie to zbawienie! Oszczędza mi godziny ręcznego wprowadzania danych każdego miesiąca. Gorąco polecam każdemu księgowemu.",
+        "name": "Anna Kowalska",
+        "role": "Certyfikowany księgowy"
+      },
+      "testimonial2": {
+        "quote": "Proste, szybkie i robi dokładnie to, co obiecuje. Plan premium to oczywisty wybór za tę cenę.",
+        "name": "Jan Nowak",
+        "role": "Właściciel małej firmy"
+      },
+      "testimonial3": {
+        "quote": "Byłem sceptyczny na początku, ale dokładność konwersji PDF jest imponująca. Radzi sobie z złożonymi wyciągami z łatwością.",
+        "name": "Ewa Wiśniewska",
+        "role": "Freelancer księgowy"
+      }
+    },
+    "cta": {
+      "title": "Gotowy na nieograniczone konwersje?",
+      "subtitle": "Zarejestruj się teraz i odblokuj nieograniczone konwersje plików, przetwarzanie wsadowe i priorytetowe wsparcie dzięki naszemu planowi premium."
+    },
+    "footer": {
+      "copyright": "© 2024 Statement Converter. Wszelkie prawa zastrzeżone.",
+      "privacy": "Polityka prywatności",
+      "terms": "Warunki korzystania z usługi"
+    }
+  },
+  "seo": {
+    "title": "CSV2MT - Konwertuj wyciągi bankowe do formatu MT940 natychmiast",
+    "description": "Bezproblemowo konwertuj swoje wyciągi bankowe z formatów CSV, PDF lub Excel do standardowego formatu MT940. Narzędzie oparte na AI do natychmiastowego, bezpiecznego przetwarzania danych finansowych.",
+    "keywords": "MT940, konwerter wyciągów bankowych, CSV do MT940, PDF do MT940, Excel do MT940, dane finansowe, wyciągi bankowe, oprogramowanie księgowe, konwerter AI"
+  }
+}
