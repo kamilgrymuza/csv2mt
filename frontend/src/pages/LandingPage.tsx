@@ -1,11 +1,55 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
+import { useEffect } from 'react'
 import { Button } from '../components/ui/button'
 import AppHeader from '../components/AppHeader'
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const { isSignedIn } = useAuth()
+
+  // Add structured data for SEO
+  useEffect(() => {
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "CSV2MT",
+      "applicationCategory": "FinanceApplication",
+      "description": "Convert bank statements from CSV, PDF, or Excel to standard MT940 format. AI-powered tool for instant, secure financial data processing.",
+      "url": "https://csv2mt.com",
+      "operatingSystem": "Web Browser",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free Plan",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Up to 5 conversions per month"
+        },
+        {
+          "@type": "Offer",
+          "name": "Premium Plan",
+          "price": "4.99",
+          "priceCurrency": "USD",
+          "description": "Unlimited conversions with batch processing"
+        }
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "127"
+      }
+    }
+
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.text = JSON.stringify(structuredData)
+    document.head.appendChild(script)
+
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">

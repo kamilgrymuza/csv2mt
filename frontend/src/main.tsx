@@ -51,3 +51,10 @@ createRoot(document.getElementById('root')!).render(
     </ClerkProvider>
   </StrictMode>,
 )
+
+// Signal to prerenderer that the app is ready
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    document.dispatchEvent(new Event('app-rendered'))
+  })
+}
