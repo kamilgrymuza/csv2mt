@@ -81,15 +81,22 @@ class ClaudeDocumentParser:
         # Extract text content based on file type
         if file_type == "csv":
             text_content = self._extract_csv_content(file_content)
-            return self._parse_with_claude_text(text_content, account_number)
+            result = self._parse_with_claude_text(text_content, account_number)
         elif file_type == "pdf":
             text_content = self._extract_pdf_content(file_content)
-            return self._parse_with_claude_text(text_content, account_number)
+            result = self._parse_with_claude_text(text_content, account_number)
         elif file_type in ["xls", "xlsx"]:
             text_content = self._extract_excel_content(file_content)
-            return self._parse_with_claude_text(text_content, account_number)
+            result = self._parse_with_claude_text(text_content, account_number)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
+
+        # Store original filename in metadata for Field 20 reference generation
+        if "metadata" not in result:
+            result["metadata"] = {}
+        result["metadata"]["source_filename"] = filename
+
+        return result
 
     def _get_file_type(self, filename: str) -> str:
         """Determine file type from filename"""
@@ -165,7 +172,7 @@ Your task:
    - Balance (account balance after transaction if available)
 
 3. Also extract metadata:
-   - account_number (if found in document)
+   - account_number (if found in document - remove ALL whitespace/spaces from IBANs)
    - currency (3-letter ISO currency code like USD, EUR, GBP, PLN, etc. - REQUIRED)
    - statement_start_date (first transaction date)
    - statement_end_date (last transaction date)
@@ -201,6 +208,7 @@ IMPORTANT:
 - If no currency is specified in the document, use "EUR" as default
 - Amounts: use negative for money going out, positive for money coming in
 - Be thorough - extract ALL transactions you find
+- For account_number: Remove ALL spaces/whitespace (e.g., "PL 27 1050..." should be "PL271050...")
 
 Document content:
 
@@ -264,6 +272,21 @@ Document content:
         # Use provided account number or from metadata
         acc_num = account_number or metadata.get("account_number") or "UNKNOWN"
 
+        # Remove all whitespace from account number (IBANs should not have spaces)
+        # BUT preserve any existing slashes
+        acc_num = acc_num.replace(" ", "").replace("\t", "").replace("\n", "")
+
+        # Add slash prefix for IBANs (SWIFT MT940 standard: :25:/IBAN)
+        # IBAN format: 2 letters + 2 digits + up to 30 alphanumeric characters
+        # Only add slash if account looks like IBAN and doesn't already have it
+        acc_num_without_slash = acc_num.lstrip('/')
+        if (acc_num_without_slash and
+            len(acc_num_without_slash) >= 15 and
+            acc_num_without_slash[:2].isalpha() and
+            not acc_num.startswith('/')):
+            # Add slash prefix for IBAN (best practice per SWIFT MT940 standard)
+            acc_num = f"/{acc_num_without_slash}"
+
         # Get dates
         start_date = metadata.get("statement_start_date")
         end_date = metadata.get("statement_end_date")
@@ -274,7 +297,8 @@ Document content:
             end_date = transactions[-1]["date"]
 
         # Format dates for MT940
-        statement_num = "001"
+        # Field 28C: Statement number (5 digits per SWIFT standard)
+        statement_num = "00001"  # First statement (we're generating from a single document)
         opening_balance = metadata.get("opening_balance")
         closing_balance = metadata.get("closing_balance")
 
@@ -303,8 +327,36 @@ Document content:
         # Build MT940
         mt940_lines = []
 
+        # Generate Field 20: Transaction Reference Number (unique message identifier)
+        # Format: DATE-FILENAME (max 16 chars per SWIFT standard)
+        # This provides uniqueness by combining date with source file identifier
+        # Example: 20241015-ABC123 or 241015-STATEMENT
+        if start_date:
+            # Use YYMMDD format to save space (vs YYYYMMDD)
+            date_part = datetime.strptime(start_date, "%Y-%m-%d").strftime("%y%m%d")
+
+            # Extract meaningful part from filename (if available)
+            source_filename = metadata.get("source_filename", "")
+            if source_filename:
+                # Remove extension and take first 8 chars of basename
+                basename = source_filename.rsplit('.', 1)[0]  # Remove extension
+                # Keep only alphanumeric chars
+                basename_clean = ''.join(c for c in basename if c.isalnum())
+                filename_part = basename_clean[:8].upper() if basename_clean else "STMT"
+            else:
+                filename_part = "STMT"
+
+            # Combine: DATE-FILE (e.g., 241015-STATEMENT, 241015-INGCORP)
+            field_20_ref = f"{date_part}-{filename_part}"
+
+            # Ensure max 16 characters (SWIFT requirement)
+            field_20_ref = field_20_ref[:16]
+        else:
+            # Fallback if no date available - use timestamp
+            field_20_ref = datetime.now().strftime("%y%m%d%H%M%S")[:16]
+
         # Header
-        mt940_lines.append(":20:STATEMENT")
+        mt940_lines.append(f":20:{field_20_ref}")
         mt940_lines.append(f":25:{acc_num}")
         mt940_lines.append(f":28C:{statement_num}")
 
@@ -341,9 +393,21 @@ Document content:
             # Value date (6) + Entry date (4) + Debit/Credit + Amount + Type code
             mt940_lines.append(f":61:{value_date}{entry_date}{debit_credit}{amount_str}{type_code}")
 
-            # Transaction details
-            description = txn.get("description", "").replace("\n", " ")[:65]
-            mt940_lines.append(f":86:{description}")
+            # Transaction details - Field 86: max 6 lines of 65 characters each
+            description = txn.get("description", "").replace("\n", " ")
+            # Split long descriptions across multiple lines (SWIFT MT940 spec: 6*65x)
+            max_lines = 6
+            line_length = 65
+            desc_lines = []
+
+            for i in range(0, min(len(description), max_lines * line_length), line_length):
+                desc_lines.append(description[i:i+line_length])
+
+            # First line starts with :86:, continuation lines don't have the tag
+            if desc_lines:
+                mt940_lines.append(f":86:{desc_lines[0]}")
+                for continuation_line in desc_lines[1:]:
+                    mt940_lines.append(continuation_line)
 
         # Closing balance
         if end_date:

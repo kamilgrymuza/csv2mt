@@ -57,13 +57,16 @@ async def convert_csv_to_mt940(
         crud.create_conversion_usage(db, usage)
         logger.info(f"Conversion tracked for user {current_user.id}")
 
-        # Return MT940 file
+        # Return MT940 file (encode as UTF-8)
         filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
 
         return Response(
-            content=mt940_content,
+            content=mt940_content.encode('utf-8'),
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "text/plain; charset=utf-8"
+            }
         )
 
     except BankParserError as e:
@@ -137,13 +140,16 @@ async def auto_convert_document(
         crud.create_conversion_usage(db, usage)
         logger.info(f"Auto-conversion tracked for user {current_user.id}")
 
-        # Return MT940 file
+        # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
 
         return Response(
-            content=mt940_content,
+            content=mt940_content.encode('utf-8'),
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f"attachment; filename={output_filename}"}
+            headers={
+                "Content-Disposition": f"attachment; filename={output_filename}",
+                "Content-Type": "text/plain; charset=utf-8"
+            }
         )
 
     except ValueError as e:

@@ -216,7 +216,7 @@ def display_transactions(transactions: list, currency: str = "EUR"):
     table.add_column("Date", style="cyan", width=12)
     table.add_column("Type", width=10)
     table.add_column("Amount", justify="right", width=15)
-    table.add_column("Description", style="white", no_wrap=False)
+    table.add_column("Description", style="white", no_wrap=False, overflow="fold")
     table.add_column("Balance", justify="right", width=15)
 
     for txn in transactions:
@@ -255,10 +255,7 @@ def display_transactions(transactions: list, currency: str = "EUR"):
         else:
             balance_str = "[dim]N/A[/dim]"
 
-        # Truncate description if too long
-        if len(description) > 50:
-            description = description[:47] + "..."
-
+        # Don't truncate - Rich library will wrap long descriptions automatically
         table.add_row(
             date,
             type_str,
@@ -444,10 +441,22 @@ def reconstruct_mt940_from_parsed(statement) -> str:
 
             lines.append(f":61:{date_str}{entry_date}{status}{amount_str}{txn_code}")
 
-            # Field 86: Transaction details
-            description = txn_data.get('transaction_details', '')
+            # Field 86: Transaction details - max 6 lines of 65 characters each
+            description = txn_data.get('transaction_details', '').replace('\n', ' ')
             if description:
-                lines.append(f":86:{description}")
+                # Split long descriptions across multiple lines (SWIFT MT940 spec: 6*65x)
+                max_lines = 6
+                line_length = 65
+                desc_lines = []
+
+                for i in range(0, min(len(description), max_lines * line_length), line_length):
+                    desc_lines.append(description[i:i+line_length])
+
+                # First line starts with :86:, continuation lines don't have the tag
+                if desc_lines:
+                    lines.append(f":86:{desc_lines[0]}")
+                    for continuation_line in desc_lines[1:]:
+                        lines.append(continuation_line)
 
     # Field 62F: Closing Balance
     cb = metadata.get('final_closing_balance')
@@ -541,11 +550,11 @@ def main():
         # Display MT940 summary and get parsed statement
         validation_success, parsed_statement = display_mt940_summary(mt940_content)
 
-        # Save to file if requested
+        # Save to file if requested (always use UTF-8 encoding)
         if args.output:
             output_path = Path(args.output)
-            output_path.write_text(mt940_content)
-            console.print(f"\n[green]✓[/green] MT940 file saved to: [cyan]{output_path}[/cyan]")
+            output_path.write_text(mt940_content, encoding='utf-8')
+            console.print(f"\n[green]✓[/green] MT940 file saved to: [cyan]{output_path}[/cyan] (UTF-8)")
         else:
             # Display what the library actually parsed (round-trip validation)
             console.print("\n")

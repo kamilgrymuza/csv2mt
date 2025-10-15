@@ -129,3 +129,11 @@ backend/statements/
 *.xlsx
 # But keep sample files
 !backend/sample_statement.csv
+
+# E2E test fixtures (may contain sensitive bank data)
+backend/tests/fixtures/e2e/*/statement.*
+backend/tests/fixtures/e2e/*/expected.mt940
+backend/tests/fixtures/e2e/*/expected_utf8.mt940
+backend/tests/fixtures/e2e/*/generated.mt940
+# But keep the README
+!backend/tests/fixtures/e2e/README.md
