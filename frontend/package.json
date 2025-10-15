@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && react-snap",
-    "build:no-prerender": "tsc -b && vite build",
+    "build": "tsc -b && vite build",
+    "build:prerender": "tsc -b && vite build && react-snap",
     "lint": "eslint .",
     "preview": "vite preview"
   },
