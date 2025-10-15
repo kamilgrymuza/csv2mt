@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignOutButton } from '@clerk/clerk-react'
 import { Button } from './ui/button'
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './LanguageSwitcher'
 
 interface AppHeaderProps {
@@ -10,13 +11,24 @@ interface AppHeaderProps {
 
 export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
   const navigate = useNavigate()
+  const { i18n } = useTranslation()
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Helper to get current language and construct language-aware paths
+  const getLangPath = (path: string) => {
+    const lang = i18n.language || 'en'
+    return `/${lang}${path}`
+  }
+
   const scrollToSection = (sectionId: string) => {
+    const currentPath = window.location.pathname
+    const langPattern = /^\/(en|pl)(\/.*)?$/
+    const isOnLandingPage = langPattern.test(currentPath) && (currentPath.match(/^\/(en|pl)\/?$/))
+
     // If we're not on the landing page, navigate there first
-    if (window.location.pathname !== '/') {
-      navigate('/')
+    if (!isOnLandingPage) {
+      navigate(getLangPath('/'))
       // Wait for navigation to complete, then scroll
       setTimeout(() => {
         const element = document.getElementById(sectionId)
@@ -33,10 +45,14 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
   }
 
   const handleLogoClick = () => {
-    if (window.location.pathname === '/') {
+    const currentPath = window.location.pathname
+    const langPattern = /^\/(en|pl)(\/.*)?$/
+    const isOnLandingPage = langPattern.test(currentPath) && (currentPath.match(/^\/(en|pl)\/?$/))
+
+    if (isOnLandingPage) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      navigate('/')
+      navigate(getLangPath('/'))
     }
   }
 
@@ -98,7 +114,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
             <SignedOut>
               <Button
                 variant="primary"
-                onClick={() => navigate('/sign-in')}
+                onClick={() => navigate(getLangPath('/sign-in'))}
               >
                 Log in
               </Button>
@@ -107,7 +123,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
             <SignedIn>
               <Button
                 variant="secondary"
-                onClick={() => navigate('/convert')}
+                onClick={() => navigate(getLangPath('/convert'))}
               >
                 Converter
               </Button>
@@ -138,7 +154,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                     <button
                       onClick={() => {
-                        navigate('/subscription')
+                        navigate(getLangPath('/subscription'))
                         setIsAccountMenuOpen(false)
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
