@@ -166,6 +166,7 @@ Your task:
 
 3. Also extract metadata:
    - account_number (if found in document)
+   - currency (3-letter ISO currency code like USD, EUR, GBP, PLN, etc. - REQUIRED)
    - statement_start_date (first transaction date)
    - statement_end_date (last transaction date)
    - opening_balance (starting balance if available)
@@ -185,6 +186,7 @@ Return ONLY a valid JSON object with this structure:
   ],
   "metadata": {
     "account_number": "123456789",
+    "currency": "USD",
     "statement_start_date": "2024-01-01",
     "statement_end_date": "2024-01-31",
     "opening_balance": 2000.00,
@@ -195,6 +197,8 @@ Return ONLY a valid JSON object with this structure:
 IMPORTANT:
 - Return ONLY the JSON object, no other text
 - If a field is not available, use null
+- For currency: Look for currency symbols (€, $, £, zł) or currency codes (EUR, USD, GBP, PLN) in the document
+- If no currency is specified in the document, use "EUR" as default
 - Amounts: use negative for money going out, positive for money coming in
 - Be thorough - extract ALL transactions you find
 
@@ -258,7 +262,7 @@ Document content:
         transactions = transactions_data.get("transactions", [])
 
         # Use provided account number or from metadata
-        acc_num = account_number or metadata.get("account_number", "UNKNOWN")
+        acc_num = account_number or metadata.get("account_number") or "UNKNOWN"
 
         # Get dates
         start_date = metadata.get("statement_start_date")
@@ -309,22 +313,33 @@ Document content:
             start_date_formatted = datetime.strptime(start_date, "%Y-%m-%d").strftime("%y%m%d")
             opening_sign = "C" if opening_balance >= 0 else "D"
             opening_amount = abs(opening_balance)
-            mt940_lines.append(f":60F:{opening_sign}{start_date_formatted}EUR{opening_amount:.2f}")
+            # Use comma for decimal separator (European MT940 format)
+            opening_amount_str = f"{opening_amount:.2f}".replace('.', ',')
+            # Get currency from metadata, default to EUR
+            currency = metadata.get("currency", "EUR")
+            mt940_lines.append(f":60F:{opening_sign}{start_date_formatted}{currency}{opening_amount_str}")
 
         # Transactions
         for idx, txn in enumerate(transactions, 1):
             date_obj = datetime.strptime(txn["date"], "%Y-%m-%d")
-            value_date = date_obj.strftime("%y%m%d")
+            value_date = date_obj.strftime("%y%m%d")  # YYMMDD format
+            entry_date = date_obj.strftime("%m%d")     # MMDD format (optional entry date)
 
             amount = txn["amount"]
             debit_credit = "D" if amount < 0 else "C"
             amount_abs = abs(amount)
 
-            # Transaction type code
-            type_code = "NTRF"  # Non-SEPA transfer (generic)
+            # Format amount with comma (European format for MT940)
+            amount_str = f"{amount_abs:.2f}".replace('.', ',')
 
-            # Statement line
-            mt940_lines.append(f":61:{value_date}{value_date}{debit_credit}{amount_abs:.2f}N{type_code}")
+            # Transaction type code
+            # Format: [funds_code][3-char type code]
+            # N = non-urgent, MSC = miscellaneous, TRF = transfer
+            type_code = "NMSC"  # N=funds code, MSC=miscellaneous
+
+            # Statement line format: :61:YYMMDD[MMDD][D|C]amount,decimals[N]TYPE
+            # Value date (6) + Entry date (4) + Debit/Credit + Amount + Type code
+            mt940_lines.append(f":61:{value_date}{entry_date}{debit_credit}{amount_str}{type_code}")
 
             # Transaction details
             description = txn.get("description", "").replace("\n", " ")[:65]
@@ -335,6 +350,10 @@ Document content:
             end_date_formatted = datetime.strptime(end_date, "%Y-%m-%d").strftime("%y%m%d")
             closing_sign = "C" if closing_balance >= 0 else "D"
             closing_amount = abs(closing_balance)
-            mt940_lines.append(f":62F:{closing_sign}{end_date_formatted}EUR{closing_amount:.2f}")
+            # Use comma for decimal separator (European MT940 format)
+            closing_amount_str = f"{closing_amount:.2f}".replace('.', ',')
+            # Get currency from metadata, default to EUR
+            currency = metadata.get("currency", "EUR")
+            mt940_lines.append(f":62F:{closing_sign}{end_date_formatted}{currency}{closing_amount_str}")
 
         return "\n".join(mt940_lines)

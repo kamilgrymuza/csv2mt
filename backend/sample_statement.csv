@@ -1,0 +1,10 @@
+Date,Description,Amount,Balance
+2024-01-01,Opening Balance,0.00,1000.00
+2024-01-05,Salary Deposit,2500.00,3500.00
+2024-01-08,Grocery Store,-87.50,3412.50
+2024-01-10,Electric Bill,-125.00,3287.50
+2024-01-15,Restaurant,-45.75,3241.75
+2024-01-20,Gas Station,-60.00,3181.75
+2024-01-25,Online Shopping,-199.99,2981.76
+2024-01-28,ATM Withdrawal,-200.00,2781.76
+2024-01-31,Bank Fee,-5.00,2776.76

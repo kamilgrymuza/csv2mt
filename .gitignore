@@ -119,3 +119,13 @@ jspm_packages/
 
 # Vercel
 .vercel
+
+# Bank statements and MT940 files (sensitive data)
+backend/statements/
+*.mt940
+*.pdf
+*.csv
+*.xls
+*.xlsx
+# But keep sample files
+!backend/sample_statement.csv
