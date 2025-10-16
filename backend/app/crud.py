@@ -97,17 +97,32 @@ def create_conversion_usage(db: Session, usage: schemas.ConversionUsageCreate) -
     return db_usage
 
 
-def get_user_monthly_conversions(db: Session, user_id: int) -> int:
-    """Get the number of conversions for current month"""
-    now = datetime.now(timezone.utc)
-    current_month = now.month
-    current_year = now.year
+def get_user_monthly_conversions(db: Session, user_id: int, subscription: Optional[models.Subscription] = None) -> int:
+    """
+    Get the number of conversions for the current period.
 
-    count = db.query(func.count(models.ConversionUsage.id)).filter(
-        models.ConversionUsage.user_id == user_id,
-        extract('month', models.ConversionUsage.conversion_date) == current_month,
-        extract('year', models.ConversionUsage.conversion_date) == current_year
-    ).scalar()
+    For Premium users: Counts conversions within current billing period (current_period_start to current_period_end)
+    For Free users: Counts conversions within current calendar month
+    """
+    # If user has active subscription with billing period dates, use those
+    if subscription and subscription.status == models.SubscriptionStatus.ACTIVE and subscription.current_period_start and subscription.current_period_end:
+        # Count conversions within current billing period
+        count = db.query(func.count(models.ConversionUsage.id)).filter(
+            models.ConversionUsage.user_id == user_id,
+            models.ConversionUsage.conversion_date >= subscription.current_period_start,
+            models.ConversionUsage.conversion_date < subscription.current_period_end
+        ).scalar()
+    else:
+        # Free users: count conversions in current calendar month
+        now = datetime.now(timezone.utc)
+        current_month = now.month
+        current_year = now.year
+
+        count = db.query(func.count(models.ConversionUsage.id)).filter(
+            models.ConversionUsage.user_id == user_id,
+            extract('month', models.ConversionUsage.conversion_date) == current_month,
+            extract('year', models.ConversionUsage.conversion_date) == current_year
+        ).scalar()
 
     return count or 0
 
@@ -115,14 +130,15 @@ def get_user_monthly_conversions(db: Session, user_id: int) -> int:
 def user_can_convert(db: Session, user_id: int) -> bool:
     """
     Check if user can perform a conversion based on:
-    1. Active subscription (100 per month)
-    2. Free tier limit (5 per month)
+    1. Active subscription (100 per billing period)
+    2. Free tier limit (5 per calendar month)
     """
-    monthly_conversions = get_user_monthly_conversions(db, user_id)
+    subscription = get_subscription_by_user_id(db, user_id)
+    monthly_conversions = get_user_monthly_conversions(db, user_id, subscription)
 
     # Check if user has active subscription
     if user_has_active_subscription(db, user_id):
-        # Premium users get 100 conversions per month
+        # Premium users get 100 conversions per billing period
         return monthly_conversions < settings.premium_conversion_limit
 
     # Check free tier limit
@@ -131,10 +147,9 @@ def user_can_convert(db: Session, user_id: int) -> bool:
 
 def get_user_usage_stats(db: Session, user_id: int) -> dict:
     """Get user usage statistics"""
-    has_subscription = user_has_active_subscription(db, user_id)
-    conversions_used = get_user_monthly_conversions(db, user_id)
-
     subscription = get_subscription_by_user_id(db, user_id)
+    has_subscription = user_has_active_subscription(db, user_id)
+    conversions_used = get_user_monthly_conversions(db, user_id, subscription)
 
     # Set limit based on subscription status
     if has_subscription:
