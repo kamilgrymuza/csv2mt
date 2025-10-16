@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useQuery } from '@tanstack/react-query'
 import axios from '../lib/axios'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import AppHeader from '../components/AppHeader'
 import {
   Layout,
@@ -44,6 +45,7 @@ export default function SubscriptionPage() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { i18n } = useTranslation()
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false)
   const [isCreatingPortal, setIsCreatingPortal] = useState(false)
 
@@ -73,9 +75,13 @@ export default function SubscriptionPage() {
       setIsCreatingCheckout(true)
       const token = await getToken()
 
+      const priceId = i18n.language === 'pl'
+        ? import.meta.env.VITE_STRIPE_PRICE_ID_PLN
+        : import.meta.env.VITE_STRIPE_PRICE_ID_USD
+
       const response = await axios.post(
         `${API_URL}/subscription/create-checkout-session`,
-        {},
+        { price_id: priceId },
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -290,7 +296,7 @@ export default function SubscriptionPage() {
 
                       <div>
                         <Title level={2} style={{ margin: 0, display: 'inline' }}>
-                          $4.99
+                          {i18n.language === 'pl' ? '19,99 zł' : '$4.99'}
                         </Title>
                         <Text style={{ fontSize: '16px', color: '#666' }}> / month</Text>
                       </div>

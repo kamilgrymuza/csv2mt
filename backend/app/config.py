@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     stripe_secret_key: Optional[str] = None
     stripe_publishable_key: Optional[str] = None
     stripe_webhook_secret: Optional[str] = None
-    stripe_price_id: Optional[str] = None  # Price ID for $4.99/month subscription
+    stripe_price_id: Optional[str] = None  # Price ID for $4.99/month subscription (USD) - kept for backward compatibility
+    stripe_price_id_usd: Optional[str] = None  # Price ID for $4.99/month subscription (USD)
+    stripe_price_id_pln: Optional[str] = None  # Price ID for 19.99 PLN/month subscription
 
     # Subscription limits
     free_conversion_limit: int = 5
