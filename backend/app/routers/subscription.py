@@ -84,10 +84,10 @@ async def create_checkout_session(
     except HTTPException:
         raise
     except StripeError as e:
-        logger.error(f"Stripe error creating checkout session: {str(e)}")
+        logger.error("Stripe error creating checkout session: %s", str(e))
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
     except Exception as e:
-        logger.error(f"Error creating checkout session: {str(e)}")
+        logger.error("Error creating checkout session: %s", str(e))
         raise HTTPException(status_code=500, detail="Failed to create checkout session")
 
 
@@ -125,10 +125,10 @@ async def create_portal_session(
     except HTTPException:
         raise
     except StripeError as e:
-        logger.error(f"Stripe error creating portal session: {str(e)}")
+        logger.error("Stripe error creating portal session: %s", str(e))
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
     except Exception as e:
-        logger.error(f"Error creating portal session: {str(e)}")
+        logger.error("Error creating portal session: %s", str(e))
         raise HTTPException(status_code=500, detail="Failed to create portal session")
 
 
@@ -162,17 +162,17 @@ async def stripe_webhook(
             raise HTTPException(status_code=400, detail="Invalid signature")
 
         # Handle the event
-        logger.info(f"Received webhook event: {event['type']}")
+        logger.info("Received webhook event: %s", event['type'])
 
         success = StripeService.handle_webhook_event(db, event)
 
         if not success:
-            logger.warning(f"Webhook event {event['type']} was not fully processed")
+            logger.warning("Webhook event %s was not fully processed", event['type'])
 
         return {"status": "success"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing webhook: {str(e)}")
+        logger.error("Error processing webhook: %s", str(e))
         raise HTTPException(status_code=500, detail="Webhook processing failed")

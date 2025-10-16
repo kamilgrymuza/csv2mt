@@ -55,7 +55,7 @@ async def convert_csv_to_mt940(
             bank_name=bank_name
         )
         crud.create_conversion_usage(db, usage)
-        logger.info(f"Conversion tracked for user {current_user.id}")
+        logger.info("Conversion tracked for user %s", current_user.id)
 
         # Return MT940 file (encode as UTF-8)
         filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
@@ -70,18 +70,18 @@ async def convert_csv_to_mt940(
         )
 
     except BankParserError as e:
-        logger.error(f"Bank parser error: {str(e)}")
+        logger.error("Bank parser error: %s", str(e))
         raise HTTPException(status_code=400, detail=f"Parser error: {str(e)}")
 
     except MT940ConverterError as e:
-        logger.error(f"MT940 converter error: {str(e)}")
+        logger.error("MT940 converter error: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Conversion error: {str(e)}")
 
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail="File encoding not supported. Please use UTF-8.")
 
     except Exception as e:
-        logger.error(f"Unexpected error during conversion: {str(e)}")
+        logger.error("Unexpected error during conversion: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error during conversion")
 
 
@@ -117,7 +117,7 @@ async def auto_convert_document(
         parser = ClaudeDocumentParser()
 
         # Parse document
-        logger.info(f"Parsing document: {file.filename}")
+        logger.info("Parsing document: %s", file.filename)
         parsed_data = parser.parse_document(
             file_content=file_stream,
             filename=file.filename,
@@ -125,7 +125,7 @@ async def auto_convert_document(
         )
 
         # Convert to MT940
-        logger.info(f"Converting to MT940 format")
+        logger.info("Converting to MT940 format")
         mt940_content = parser.convert_to_mt940(
             transactions_data=parsed_data,
             account_number=account_number
@@ -141,7 +141,8 @@ async def auto_convert_document(
             output_tokens=metadata.get("output_tokens")
         )
         crud.create_conversion_usage(db, usage)
-        logger.info(f"Auto-conversion tracked for user {current_user.id} (input: {usage.input_tokens}, output: {usage.output_tokens})")
+        logger.info("Auto-conversion tracked for user %s (input: %s, output: %s)",
+                   current_user.id, usage.input_tokens, usage.output_tokens)
 
         # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
@@ -156,9 +157,9 @@ async def auto_convert_document(
         )
 
     except ValueError as e:
-        logger.error(f"Value error during parsing: {str(e)}")
+        logger.error("Value error during parsing: %s", str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
     except Exception as e:
-        logger.error(f"Unexpected error during auto-conversion: {str(e)}", exc_info=True)
+        logger.error("Unexpected error during auto-conversion: %s", str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Auto-conversion error: {str(e)}")
