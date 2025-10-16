@@ -1,7 +1,22 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/en/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/en",
+      "destination": "/en/index.html"
+    },
+    {
+      "source": "/pl",
+      "destination": "/pl/index.html"
+    },
+    {
+      "source": "/:lang(en|pl)/:path*",
       "destination": "/index.html"
     }
   ]
