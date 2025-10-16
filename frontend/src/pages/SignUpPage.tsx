@@ -1,7 +1,11 @@
 import { SignUp } from '@clerk/clerk-react'
+import { useTranslation } from 'react-i18next'
 import AppHeader from '../components/AppHeader'
 
 export default function SignUpPage() {
+  const { i18n, t } = useTranslation()
+  const lang = i18n.language || 'en'
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
       <AppHeader showNavLinks={true} />
@@ -18,23 +22,23 @@ export default function SignUpPage() {
             color: '#1a1a1a',
             marginBottom: '12px'
           }}>
-            Create your account
+            {t('auth.signUp.title', 'Create your account')}
           </h1>
           <p style={{
             fontSize: '16px',
             color: '#666',
             margin: 0
           }}>
-            Join us to start converting your bank statements effortlessly.
+            {t('auth.signUp.subtitle', 'Join us to start converting your bank statements effortlessly.')}
           </p>
         </div>
 
         <SignUp
           routing="path"
-          path="/sign-up"
-          signInUrl="/sign-in"
-          forceRedirectUrl="/convert"
-          fallbackRedirectUrl="/convert"
+          path={`/${lang}/sign-up`}
+          signInUrl={`/${lang}/sign-in`}
+          forceRedirectUrl={`/${lang}/convert`}
+          fallbackRedirectUrl={`/${lang}/convert`}
           appearance={{
             elements: {
               rootBox: {
