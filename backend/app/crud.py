@@ -115,15 +115,17 @@ def get_user_monthly_conversions(db: Session, user_id: int) -> int:
 def user_can_convert(db: Session, user_id: int) -> bool:
     """
     Check if user can perform a conversion based on:
-    1. Active subscription (unlimited)
+    1. Active subscription (100 per month)
     2. Free tier limit (5 per month)
     """
+    monthly_conversions = get_user_monthly_conversions(db, user_id)
+
     # Check if user has active subscription
     if user_has_active_subscription(db, user_id):
-        return True
+        # Premium users get 100 conversions per month
+        return monthly_conversions < settings.premium_conversion_limit
 
     # Check free tier limit
-    monthly_conversions = get_user_monthly_conversions(db, user_id)
     return monthly_conversions < settings.free_conversion_limit
 
 
@@ -134,11 +136,17 @@ def get_user_usage_stats(db: Session, user_id: int) -> dict:
 
     subscription = get_subscription_by_user_id(db, user_id)
 
+    # Set limit based on subscription status
+    if has_subscription:
+        conversions_limit = settings.premium_conversion_limit
+    else:
+        conversions_limit = settings.free_conversion_limit
+
     return {
         "has_active_subscription": has_subscription,
         "status": subscription.status if subscription else None,
         "conversions_used": conversions_used,
-        "conversions_limit": None if has_subscription else settings.free_conversion_limit,
+        "conversions_limit": conversions_limit,
         "can_convert": user_can_convert(db, user_id),
         "cancel_at_period_end": subscription.cancel_at_period_end if subscription else None,
         "current_period_end": subscription.current_period_end if subscription else None

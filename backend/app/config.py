@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Subscription limits
     free_conversion_limit: int = 5
+    premium_conversion_limit: int = 100
 
     # Application URL for Stripe redirects
     frontend_url: str = "http://localhost:3000"

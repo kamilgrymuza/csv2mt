@@ -128,9 +128,20 @@
         "price": "19,99 zł",
         "period": "/ miesiąc",
         "features": {
-          "conversions": "Nieograniczone konwersje",
+          "conversions": "Do 100 konwersji/miesiąc",
           "batch": "Przetwarzanie wsadowe",
           "support": "Priorytetowe wsparcie"
+        }
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "subtitle": "Dla dużych organizacji z dużymi potrzebami.",
+        "contactUs": "Skontaktuj się z nami",
+        "features": {
+          "conversions": "Nieograniczone konwersje",
+          "batch": "Zaawansowane przetwarzanie wsadowe",
+          "support": "Dedykowane wsparcie",
+          "customization": "Niestandardowe integracje"
         }
       }
     },

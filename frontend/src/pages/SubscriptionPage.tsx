@@ -189,6 +189,22 @@ export default function SubscriptionPage() {
                           {subscriptionStatus.cancel_at_period_end ? t('subscription.premiumPlanCanceling') : t('subscription.premiumPlanTag')}
                         </Tag>
 
+                        <div>
+                          <Paragraph style={{ marginTop: '16px', marginBottom: '8px' }}>
+                            <Text strong>
+                              {t('subscription.conversionsUsedLabel', {
+                                used: subscriptionStatus?.conversions_used,
+                                limit: subscriptionStatus?.conversions_limit
+                              })}
+                            </Text>
+                          </Paragraph>
+                          <Progress
+                            percent={usagePercentage}
+                            status={usagePercentage >= 100 ? 'exception' : 'active'}
+                            strokeColor={usagePercentage >= 80 ? '#ff4d4f' : '#52c41a'}
+                          />
+                        </div>
+
                         {subscriptionStatus.cancel_at_period_end && subscriptionStatus.current_period_end ? (
                           <Alert
                             message={t('subscription.subscriptionCanceling')}
@@ -205,15 +221,14 @@ export default function SubscriptionPage() {
                             type="warning"
                             showIcon
                           />
-                        ) : (
+                        ) : !subscriptionStatus?.can_convert ? (
                           <Alert
-                            message={t('subscription.unlimitedConversionsTitle')}
-                            description={t('subscription.unlimitedConversionsDesc')}
-                            type="success"
+                            message={t('subscription.limitReachedTitle')}
+                            description={t('subscription.limitReachedDesc')}
+                            type="warning"
                             showIcon
-                            icon={<CheckCircleOutlined />}
                           />
-                        )}
+                        ) : null}
                       </>
                     ) : (
                       <>

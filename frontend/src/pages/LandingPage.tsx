@@ -184,7 +184,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Plan */}
             <div className="bg-white rounded-lg border-2 border-gray-200 p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('landing.pricing.free.title')}</h3>
@@ -253,6 +253,48 @@ export default function LandingPage() {
                 onClick={() => isSignedIn ? handleNavigation('/subscription') : handleNavigation(`/sign-up?redirect_url=/${i18n.language}/subscription`)}
               >
                 {t('common.goPremium')}
+              </Button>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="bg-white rounded-lg border-2 border-gray-200 p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('landing.pricing.enterprise.title')}</h3>
+              <p className="text-gray-600 mb-6">{t('landing.pricing.enterprise.subtitle')}</p>
+              <div className="mb-6 h-16 flex items-center">
+                <span className="text-2xl font-semibold text-gray-900">{t('landing.pricing.enterprise.contactUs')}</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center text-gray-700">
+                  <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  {t('landing.pricing.enterprise.features.conversions')}
+                </li>
+                <li className="flex items-center text-gray-700">
+                  <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  {t('landing.pricing.enterprise.features.batch')}
+                </li>
+                <li className="flex items-center text-gray-700">
+                  <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  {t('landing.pricing.enterprise.features.support')}
+                </li>
+                <li className="flex items-center text-gray-700">
+                  <svg className="h-5 w-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  {t('landing.pricing.enterprise.features.customization')}
+                </li>
+              </ul>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => window.location.href = 'mailto:contact@csv2mt.com'}
+              >
+                {t('landing.pricing.enterprise.contactUs')}
               </Button>
             </div>
           </div>

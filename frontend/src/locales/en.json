@@ -128,9 +128,20 @@
         "price": "$4.99",
         "period": "/ month",
         "features": {
-          "conversions": "Unlimited conversions",
+          "conversions": "Up to 100 conversions/month",
           "batch": "Batch processing",
           "support": "Priority support"
+        }
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "subtitle": "For large organizations with high volume needs.",
+        "contactUs": "Contact Us",
+        "features": {
+          "conversions": "Unlimited conversions",
+          "batch": "Advanced batch processing",
+          "support": "Dedicated support",
+          "customization": "Custom integrations"
         }
       }
     },
