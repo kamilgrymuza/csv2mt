@@ -180,16 +180,33 @@ class StripeService:
             # Fetch subscription from Stripe
             stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
-            # Update period dates if they exist in Stripe
-            if stripe_sub.get("current_period_start"):
+            # In newer Stripe API, period dates are in subscription items, not on subscription itself
+            # Try to get from subscription items first, then fall back to subscription level
+            period_start = None
+            period_end = None
+
+            if stripe_sub.get("items") and stripe_sub["items"].get("data") and len(stripe_sub["items"]["data"]) > 0:
+                # Get from first subscription item
+                item = stripe_sub["items"]["data"][0]
+                period_start = item.get("current_period_start")
+                period_end = item.get("current_period_end")
+
+            # Fall back to subscription level (older API format)
+            if not period_start:
+                period_start = stripe_sub.get("current_period_start")
+            if not period_end:
+                period_end = stripe_sub.get("current_period_end")
+
+            # Update period dates if they exist
+            if period_start:
                 subscription.current_period_start = datetime.fromtimestamp(
-                    stripe_sub["current_period_start"],
+                    period_start,
                     tz=datetime.now().astimezone().tzinfo
                 ).replace(tzinfo=None)
 
-            if stripe_sub.get("current_period_end"):
+            if period_end:
                 subscription.current_period_end = datetime.fromtimestamp(
-                    stripe_sub["current_period_end"],
+                    period_end,
                     tz=datetime.now().astimezone().tzinfo
                 ).replace(tzinfo=None)
 
