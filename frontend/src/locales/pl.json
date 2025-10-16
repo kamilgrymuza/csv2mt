@@ -136,14 +136,12 @@
         }
       },
       "enterprise": {
-        "title": "Enterprise",
+        "title": "Unlimited",
         "subtitle": "Dla dużych organizacji z dużymi potrzebami.",
         "contactUs": "Skontaktuj się z nami",
         "features": {
           "conversions": "Nieograniczone konwersje",
-          "batch": "Zaawansowane przetwarzanie wsadowe",
-          "support": "Dedykowane wsparcie",
-          "customization": "Niestandardowe integracje"
+          "support": "Dedykowane wsparcie"
         }
       }
     },

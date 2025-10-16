@@ -136,14 +136,12 @@
         }
       },
       "enterprise": {
-        "title": "Enterprise",
+        "title": "Unlimited",
         "subtitle": "For large organizations with high volume needs.",
         "contactUs": "Contact Us",
         "features": {
           "conversions": "Unlimited conversions",
-          "batch": "Advanced batch processing",
-          "support": "Dedicated support",
-          "customization": "Custom integrations"
+          "support": "Dedicated support"
         }
       }
     },
