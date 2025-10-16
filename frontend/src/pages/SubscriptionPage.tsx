@@ -192,7 +192,7 @@ export default function SubscriptionPage() {
                         <div>
                           <Paragraph style={{ marginTop: '16px', marginBottom: '8px' }}>
                             <Text strong>
-                              {t('subscription.conversionsUsedLabel', {
+                              {t('subscription.conversionsUsedLabelPremium', {
                                 used: subscriptionStatus?.conversions_used,
                                 limit: subscriptionStatus?.conversions_limit
                               })}

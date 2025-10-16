@@ -66,6 +66,7 @@
     "unlimitedConversionsTitle": "Nieograniczone konwersje",
     "unlimitedConversionsDesc": "Masz nieograniczony dostęp do wszystkich funkcji konwersji",
     "conversionsUsedLabel": "{{used}} / {{limit}} wykorzystanych darmowych konwersji",
+    "conversionsUsedLabelPremium": "{{used}} / {{limit}} wykorzystanych konwersji w tym miesiącu",
     "limitReachedTitle": "Osiągnięto limit",
     "limitReachedDesc": "Wykorzystałeś wszystkie darmowe konwersje w tym miesiącu. Przejdź na Premium, aby uzyskać nieograniczony dostęp.",
     "paymentInformation": "Informacje o płatności",
