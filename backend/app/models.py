@@ -70,6 +70,10 @@ class ConversionUsage(Base):
     file_name = Column(String, nullable=True)
     bank_name = Column(String, nullable=True)
 
+    # Token usage tracking for cost analysis
+    input_tokens = Column(Integer, nullable=True)
+    output_tokens = Column(Integer, nullable=True)
+
     # Usage tracking
     conversion_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

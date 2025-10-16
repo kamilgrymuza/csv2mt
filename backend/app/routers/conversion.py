@@ -131,14 +131,17 @@ async def auto_convert_document(
             account_number=account_number
         )
 
-        # Track conversion usage
+        # Track conversion usage with token usage
+        metadata = parsed_data.get("metadata", {})
         usage = ConversionUsageCreate(
             user_id=current_user.id,
             file_name=file.filename,
-            bank_name="auto-detected"
+            bank_name="auto-detected",
+            input_tokens=metadata.get("input_tokens"),
+            output_tokens=metadata.get("output_tokens")
         )
         crud.create_conversion_usage(db, usage)
-        logger.info(f"Auto-conversion tracked for user {current_user.id}")
+        logger.info(f"Auto-conversion tracked for user {current_user.id} (input: {usage.input_tokens}, output: {usage.output_tokens})")
 
         # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"

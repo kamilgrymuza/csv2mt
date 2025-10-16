@@ -86,6 +86,8 @@ class ConversionUsageCreate(BaseModel):
     user_id: int
     file_name: Optional[str] = None
     bank_name: Optional[str] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
 
 
 class ConversionUsage(ConversionUsageCreate):

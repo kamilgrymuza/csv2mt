@@ -228,6 +228,10 @@ Document content:
         # Extract JSON from response
         response_text = response.content[0].text
 
+        # Capture token usage for cost analysis
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
+
         # Try to parse JSON
         try:
             result = json.loads(response_text)
@@ -248,6 +252,12 @@ Document content:
         # Override account number if provided
         if account_number:
             result["metadata"]["account_number"] = account_number
+
+        # Add token usage to metadata for tracking
+        if "metadata" not in result:
+            result["metadata"] = {}
+        result["metadata"]["input_tokens"] = input_tokens
+        result["metadata"]["output_tokens"] = output_tokens
 
         return result
 
