@@ -16,6 +16,7 @@ interface SubscriptionStatus {
   conversions_used: number
   conversions_limit: number | null
   can_convert: boolean
+  limit_reset_date: string | null
 }
 
 interface FileConversionStatus {
@@ -505,6 +506,16 @@ export default function SimpleConverter() {
                               }}
                             />
                           </div>
+                          {subscriptionStatus.limit_reset_date && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              {t('subscription.limitResetsOn', {
+                                date: new Date(subscriptionStatus.limit_reset_date).toLocaleDateString(
+                                  i18n.language === 'pl' ? 'pl-PL' : 'en-US',
+                                  { year: 'numeric', month: 'long', day: 'numeric' }
+                                )
+                              })}
+                            </p>
+                          )}
                         </div>
                         {!subscriptionStatus.can_convert && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
@@ -540,6 +551,16 @@ export default function SimpleConverter() {
                               }}
                             />
                           </div>
+                          {subscriptionStatus.limit_reset_date && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              {t('subscription.limitResetsOn', {
+                                date: new Date(subscriptionStatus.limit_reset_date).toLocaleDateString(
+                                  i18n.language === 'pl' ? 'pl-PL' : 'en-US',
+                                  { year: 'numeric', month: 'long', day: 'numeric' }
+                                )
+                              })}
+                            </p>
+                          )}
                         </div>
                         {!subscriptionStatus.can_convert && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">

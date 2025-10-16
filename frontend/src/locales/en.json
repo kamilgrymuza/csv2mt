@@ -67,6 +67,7 @@
     "unlimitedConversionsDesc": "You have unlimited access to all conversion features",
     "conversionsUsedLabel": "{{used}} / {{limit}} free conversions used",
     "conversionsUsedLabelPremium": "{{used}} / {{limit}} conversions used this month",
+    "limitResetsOn": "Limit resets on {{date}}",
     "limitReachedTitle": "Limit Reached",
     "limitReachedDesc": "You've used all your free conversions for this month. Upgrade to Premium for unlimited access.",
     "paymentInformation": "Payment Information",

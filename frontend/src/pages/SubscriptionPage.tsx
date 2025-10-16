@@ -39,6 +39,7 @@ interface SubscriptionStatus {
   can_convert: boolean
   cancel_at_period_end: boolean | null
   current_period_end: string | null
+  limit_reset_date: string | null
 }
 
 export default function SubscriptionPage() {
@@ -203,6 +204,16 @@ export default function SubscriptionPage() {
                             status={usagePercentage >= 100 ? 'exception' : 'active'}
                             strokeColor={usagePercentage >= 80 ? '#ff4d4f' : '#52c41a'}
                           />
+                          {subscriptionStatus?.limit_reset_date && (
+                            <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                              {t('subscription.limitResetsOn', {
+                                date: new Date(subscriptionStatus.limit_reset_date).toLocaleDateString(
+                                  i18n.language === 'pl' ? 'pl-PL' : 'en-US',
+                                  { year: 'numeric', month: 'long', day: 'numeric' }
+                                )
+                              })}
+                            </Text>
+                          )}
                         </div>
 
                         {subscriptionStatus.cancel_at_period_end && subscriptionStatus.current_period_end ? (
@@ -249,6 +260,16 @@ export default function SubscriptionPage() {
                             status={usagePercentage >= 100 ? 'exception' : 'active'}
                             strokeColor={usagePercentage >= 80 ? '#ff4d4f' : '#1890ff'}
                           />
+                          {subscriptionStatus?.limit_reset_date && (
+                            <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                              {t('subscription.limitResetsOn', {
+                                date: new Date(subscriptionStatus.limit_reset_date).toLocaleDateString(
+                                  i18n.language === 'pl' ? 'pl-PL' : 'en-US',
+                                  { year: 'numeric', month: 'long', day: 'numeric' }
+                                )
+                              })}
+                            </Text>
+                          )}
                         </div>
 
                         {!subscriptionStatus?.can_convert && (

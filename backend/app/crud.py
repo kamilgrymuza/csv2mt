@@ -154,8 +154,18 @@ def get_user_usage_stats(db: Session, user_id: int) -> dict:
     # Set limit based on subscription status
     if has_subscription:
         conversions_limit = settings.premium_conversion_limit
+        # Premium users: limit resets at end of billing period
+        limit_reset_date = subscription.current_period_end if subscription else None
     else:
         conversions_limit = settings.free_conversion_limit
+        # Free users: limit resets on 1st of next month
+        now = datetime.now(timezone.utc)
+        if now.month == 12:
+            # December -> January next year
+            limit_reset_date = datetime(now.year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        else:
+            # Next month, same year
+            limit_reset_date = datetime(now.year, now.month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 
     return {
         "has_active_subscription": has_subscription,
@@ -164,5 +174,6 @@ def get_user_usage_stats(db: Session, user_id: int) -> dict:
         "conversions_limit": conversions_limit,
         "can_convert": user_can_convert(db, user_id),
         "cancel_at_period_end": subscription.cancel_at_period_end if subscription else None,
-        "current_period_end": subscription.current_period_end if subscription else None
+        "current_period_end": subscription.current_period_end if subscription else None,
+        "limit_reset_date": limit_reset_date
     }

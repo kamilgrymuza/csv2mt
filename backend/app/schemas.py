@@ -68,6 +68,7 @@ class SubscriptionStatusResponse(BaseModel):
     can_convert: bool
     cancel_at_period_end: Optional[bool] = None
     current_period_end: Optional[datetime] = None
+    limit_reset_date: Optional[datetime] = None  # When conversion limit resets
 
 
 class CheckoutSessionRequest(BaseModel):
