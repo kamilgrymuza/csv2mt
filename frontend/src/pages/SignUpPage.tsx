@@ -1,10 +1,16 @@
 import { SignUp } from '@clerk/clerk-react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
 
 export default function SignUpPage() {
   const { i18n, t } = useTranslation()
+  const [searchParams] = useSearchParams()
   const lang = i18n.language || 'en'
+
+  // Get redirect URL from query params, default to /convert
+  const redirectPath = searchParams.get('redirect_url') || '/convert'
+  const redirectUrl = `/${lang}${redirectPath}`
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
@@ -37,8 +43,8 @@ export default function SignUpPage() {
           routing="path"
           path={`/${lang}/sign-up`}
           signInUrl={`/${lang}/sign-in`}
-          forceRedirectUrl={`/${lang}/convert`}
-          fallbackRedirectUrl={`/${lang}/convert`}
+          forceRedirectUrl={redirectUrl}
+          fallbackRedirectUrl={redirectUrl}
           appearance={{
             elements: {
               rootBox: {
