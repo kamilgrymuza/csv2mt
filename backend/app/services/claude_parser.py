@@ -142,16 +142,142 @@ class ClaudeDocumentParser:
 
         return "\n".join(text_parts)
 
+    def _chunk_text_by_lines(self, text_content: str, lines_per_chunk: int = 100) -> List[str]:
+        """
+        Split text content into chunks by lines (for large files)
+
+        Args:
+            text_content: The full text content
+            lines_per_chunk: Number of lines per chunk (targets ~80-90 transactions = ~6000 output tokens with 8192 limit)
+
+        Returns:
+            List of text chunks
+        """
+        lines = text_content.split('\n')
+
+        # Keep header lines (first 20 lines usually contain metadata)
+        header_lines = lines[:20]
+        data_lines = lines[20:]
+
+        # If file is small enough, return as single chunk
+        if len(data_lines) <= lines_per_chunk:
+            return [text_content]
+
+        # Split into chunks
+        chunks = []
+        for i in range(0, len(data_lines), lines_per_chunk):
+            chunk_data = data_lines[i:i + lines_per_chunk]
+            # Each chunk includes header + data portion
+            chunk_text = '\n'.join(header_lines + chunk_data)
+            chunks.append(chunk_text)
+
+        return chunks
+
     def _parse_with_claude_text(
         self,
         text_content: str,
         account_number: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Use Claude AI to extract transaction data from text content
+        Use Claude AI to extract transaction data from text content.
+        Automatically handles large files by splitting into chunks.
 
         Args:
             text_content: The text extracted from the document
+            account_number: Optional account number
+
+        Returns:
+            Dict with transactions and metadata
+        """
+        # Check if we need to chunk the file (more than 100 lines after header)
+        lines = text_content.split('\n')
+        needs_chunking = len(lines) > 120  # 20 header + 100 data lines
+
+        if needs_chunking:
+            print(f"📄 Large file detected ({len(lines)} lines). Processing in chunks...")
+            return self._parse_large_file_in_chunks(text_content, account_number)
+
+        # For small files, process normally
+        return self._parse_single_chunk(text_content, account_number)
+
+    def _parse_large_file_in_chunks(
+        self,
+        text_content: str,
+        account_number: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Parse a large file by splitting into chunks and merging results
+
+        Args:
+            text_content: The full text content
+            account_number: Optional account number
+
+        Returns:
+            Merged Dict with all transactions and metadata
+        """
+        chunks = self._chunk_text_by_lines(text_content, lines_per_chunk=100)
+        print(f"   Split into {len(chunks)} chunks")
+
+        all_transactions = []
+        merged_metadata = {}
+        total_input_tokens = 0
+        total_output_tokens = 0
+
+        for i, chunk in enumerate(chunks, 1):
+            print(f"   Processing chunk {i}/{len(chunks)}...")
+            try:
+                chunk_result = self._parse_single_chunk(chunk, account_number)
+
+                # Collect transactions
+                all_transactions.extend(chunk_result.get("transactions", []))
+
+                # Merge metadata (take from first chunk, update dates from all chunks)
+                if not merged_metadata:
+                    merged_metadata = chunk_result.get("metadata", {})
+                else:
+                    # Update date ranges
+                    chunk_meta = chunk_result.get("metadata", {})
+                    if chunk_meta.get("statement_start_date"):
+                        if not merged_metadata.get("statement_start_date") or \
+                           chunk_meta["statement_start_date"] < merged_metadata["statement_start_date"]:
+                            merged_metadata["statement_start_date"] = chunk_meta["statement_start_date"]
+                    if chunk_meta.get("statement_end_date"):
+                        if not merged_metadata.get("statement_end_date") or \
+                           chunk_meta["statement_end_date"] > merged_metadata["statement_end_date"]:
+                            merged_metadata["statement_end_date"] = chunk_meta["statement_end_date"]
+                    # Update closing balance from last chunk
+                    if chunk_meta.get("closing_balance") is not None:
+                        merged_metadata["closing_balance"] = chunk_meta["closing_balance"]
+
+                # Accumulate token usage
+                total_input_tokens += chunk_result.get("metadata", {}).get("input_tokens", 0)
+                total_output_tokens += chunk_result.get("metadata", {}).get("output_tokens", 0)
+
+            except Exception as e:
+                print(f"   ⚠️  Chunk {i} failed: {e}")
+                # Continue with other chunks
+
+        # Update token usage in metadata
+        merged_metadata["input_tokens"] = total_input_tokens
+        merged_metadata["output_tokens"] = total_output_tokens
+
+        print(f"✓ Processed all chunks. Total transactions: {len(all_transactions)}")
+
+        return {
+            "transactions": all_transactions,
+            "metadata": merged_metadata
+        }
+
+    def _parse_single_chunk(
+        self,
+        text_content: str,
+        account_number: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Parse a single chunk of text content with Claude AI
+
+        Args:
+            text_content: The text to parse
             account_number: Optional account number
 
         Returns:
@@ -162,53 +288,39 @@ class ClaudeDocumentParser:
 The document may be a bank statement, credit card statement, or any financial transaction record.
 
 Your task:
-1. Identify all transactions in the document
-2. Extract the following information for each transaction:
-   - Date (in ISO format YYYY-MM-DD)
-   - Amount (positive for credits/deposits, negative for debits/withdrawals)
-   - Description (transaction description/payee)
-   - Transaction type (one of: CREDIT, DEBIT, TRANSFER, FEE, INTEREST, OTHER)
-   - Reference (transaction ID/reference number if available)
-   - Balance (account balance after transaction if available)
+1. Extract metadata first (one line starting with "METADATA,")
+2. Then extract all transactions (one transaction per line starting with "TXN,")
 
-3. Also extract metadata:
-   - account_number (if found in document - remove ALL whitespace/spaces from IBANs)
-   - currency (3-letter ISO currency code like USD, EUR, GBP, PLN, etc. - REQUIRED)
-   - statement_start_date (first transaction date)
-   - statement_end_date (last transaction date)
-   - opening_balance (starting balance if available)
-   - closing_balance (ending balance if available)
+Output format - CSV with properly quoted fields:
 
-Return ONLY a valid JSON object with this structure:
-{
-  "transactions": [
-    {
-      "date": "2024-01-15",
-      "amount": -50.25,
-      "description": "Amazon Purchase",
-      "transaction_type": "DEBIT",
-      "reference": "REF123456",
-      "balance": 1949.75
-    }
-  ],
-  "metadata": {
-    "account_number": "123456789",
-    "currency": "USD",
-    "statement_start_date": "2024-01-01",
-    "statement_end_date": "2024-01-31",
-    "opening_balance": 2000.00,
-    "closing_balance": 1949.75
-  }
-}
+METADATA,account_number,currency,statement_start_date,statement_end_date,opening_balance,closing_balance
+TXN,date,amount,"description",transaction_type,reference,balance
+TXN,date,amount,"description",transaction_type,reference,balance
+...
+
+Example output:
+METADATA,123456789,USD,2024-01-01,2024-01-31,2000.00,1949.75
+TXN,2024-01-15,-50.25,"Amazon Purchase",DEBIT,REF123456,1949.75
+TXN,2024-01-16,500.00,"Salary | Deposit",CREDIT,SAL2024,2449.75
+
+Field details:
+- date: ISO format YYYY-MM-DD
+- amount: positive for credits/deposits, negative for debits/withdrawals
+- description: transaction description/payee (MUST be quoted if contains commas or special chars)
+- transaction_type: CREDIT, DEBIT, TRANSFER, FEE, INTEREST, or OTHER
+- reference: transaction ID/reference number (empty if not available)
+- balance: account balance after transaction (empty if not available)
+- account_number: remove ALL whitespace/spaces from IBANs (e.g., "PL 27 1050..." → "PL271050...")
+- currency: 3-letter ISO code (USD, EUR, GBP, PLN, etc.) - look for symbols (€,$,£,zł) or codes in document
+- If currency not found, use EUR as default
+- opening_balance/closing_balance: empty if not available
 
 IMPORTANT:
-- Return ONLY the JSON object, no other text
-- If a field is not available, use null
-- For currency: Look for currency symbols (€, $, £, zł) or currency codes (EUR, USD, GBP, PLN) in the document
-- If no currency is specified in the document, use "EUR" as default
-- Amounts: use negative for money going out, positive for money coming in
+- Return ONLY the CSV format, no other text or explanations
+- ALWAYS quote description fields (they may contain commas, pipes, or other special characters)
+- One METADATA line, then TXN lines for ALL transactions
 - Be thorough - extract ALL transactions you find
-- For account_number: Remove ALL spaces/whitespace (e.g., "PL 27 1050..." should be "PL271050...")
+- Amounts: negative for money going out, positive for money coming in
 
 Document content:
 
@@ -216,7 +328,7 @@ Document content:
 
         response = self.client.messages.create(
             model="claude-sonnet-4-5-20250929",
-            max_tokens=4096,
+            max_tokens=8192,
             messages=[
                 {
                     "role": "user",
@@ -225,29 +337,24 @@ Document content:
             ]
         )
 
-        # Extract JSON from response
+        # Extract pipe-delimited response
         response_text = response.content[0].text
 
         # Capture token usage for cost analysis
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
 
-        # Try to parse JSON
+        # Parse pipe-delimited format
         try:
-            result = json.loads(response_text)
-        except json.JSONDecodeError:
-            # If response isn't pure JSON, try to extract JSON from markdown code blocks
-            import re
-            json_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', response_text, re.DOTALL)
-            if json_match:
-                result = json.loads(json_match.group(1))
-            else:
-                # Try to find JSON object in the text
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if json_match:
-                    result = json.loads(json_match.group(0))
-                else:
-                    raise ValueError("Could not extract JSON from Claude response")
+            result = self._parse_pipe_delimited_response(response_text)
+        except Exception as e:
+            # Save the raw response for debugging
+            import tempfile
+            debug_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_claude_response.txt')
+            debug_file.write(response_text)
+            debug_file.close()
+            print(f"⚠️  Parse error. Raw response saved to: {debug_file.name}")
+            raise ValueError(f"Could not parse Claude response: {str(e)}")
 
         # Override account number if provided
         if account_number:
@@ -260,6 +367,80 @@ Document content:
         result["metadata"]["output_tokens"] = output_tokens
 
         return result
+
+    def _parse_pipe_delimited_response(self, response_text: str) -> Dict[str, Any]:
+        """
+        Parse Claude's CSV response format into structured data
+
+        Args:
+            response_text: The raw response from Claude (CSV format)
+
+        Returns:
+            Dict with transactions and metadata
+        """
+        import csv
+        from io import StringIO
+
+        lines = response_text.strip().split('\n')
+        transactions = []
+        metadata = {}
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Use CSV reader to properly handle quoted fields
+            try:
+                reader = csv.reader(StringIO(line))
+                parts = next(reader)
+            except Exception as e:
+                print(f"   Skipping malformed line: {line[:100]}")
+                continue
+
+            if not parts:
+                continue
+
+            # Check the first field to determine line type
+            line_type = parts[0]
+
+            if line_type == 'METADATA':
+                # Parse: METADATA,account,currency,start_date,end_date,opening_bal,closing_bal
+                if len(parts) >= 7:
+                    metadata = {
+                        "account_number": parts[1].strip() or None,
+                        "currency": parts[2].strip() or "EUR",
+                        "statement_start_date": parts[3].strip() or None,
+                        "statement_end_date": parts[4].strip() or None,
+                        "opening_balance": float(parts[5].strip()) if parts[5].strip() else None,
+                        "closing_balance": float(parts[6].strip()) if parts[6].strip() else None
+                    }
+
+            elif line_type == 'TXN':
+                # Parse: TXN,date,amount,description,type,reference,balance
+                if len(parts) >= 5:  # At least TXN,date,amount,description,type
+                    try:
+                        txn = {
+                            "date": parts[1].strip(),
+                            "amount": float(parts[2].strip()),
+                            "description": parts[3].strip(),
+                            "transaction_type": parts[4].strip() if len(parts) > 4 else "OTHER",
+                            "reference": parts[5].strip() if len(parts) > 5 and parts[5].strip() else None,
+                            "balance": float(parts[6].strip()) if len(parts) > 6 and parts[6].strip() else None
+                        }
+                        transactions.append(txn)
+                    except (ValueError, IndexError) as e:
+                        # Skip malformed transaction lines
+                        print(f"   Skipping malformed transaction: {line[:100]}")
+                        continue
+
+        if not transactions:
+            raise ValueError("No transactions found in response")
+
+        return {
+            "transactions": transactions,
+            "metadata": metadata
+        }
 
     def convert_to_mt940(
         self,
