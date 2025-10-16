@@ -76,13 +76,22 @@ export default function SubscriptionPage() {
       setIsCreatingCheckout(true)
       const token = await getToken()
 
-      const priceId = i18n.language === 'pl'
+      const lang = i18n.language || 'en'
+      const priceId = lang === 'pl'
         ? import.meta.env.VITE_STRIPE_PRICE_ID_PLN
         : import.meta.env.VITE_STRIPE_PRICE_ID_USD
 
+      // Include language in redirect URLs
+      const successUrl = `${window.location.origin}/${lang}/subscription?success=true`
+      const cancelUrl = `${window.location.origin}/${lang}/subscription?canceled=true`
+
       const response = await axios.post(
         `${API_URL}/subscription/create-checkout-session`,
-        { price_id: priceId },
+        {
+          price_id: priceId,
+          success_url: successUrl,
+          cancel_url: cancelUrl
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`

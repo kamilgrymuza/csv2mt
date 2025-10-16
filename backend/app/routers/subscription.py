@@ -74,7 +74,9 @@ async def create_checkout_session(
         session_data = StripeService.create_checkout_session(
             db=db,
             user=current_user,
-            price_id=request.price_id
+            price_id=request.price_id,
+            success_url=request.success_url,
+            cancel_url=request.cancel_url
         )
 
         return CheckoutSessionResponse(**session_data)

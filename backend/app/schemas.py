@@ -74,6 +74,8 @@ class SubscriptionStatusResponse(BaseModel):
 class CheckoutSessionRequest(BaseModel):
     """Request to create a Stripe Checkout Session"""
     price_id: Optional[str] = None  # Optional, falls back to config
+    success_url: Optional[str] = None  # Optional, falls back to default
+    cancel_url: Optional[str] = None  # Optional, falls back to default
 
 
 class CheckoutSessionResponse(BaseModel):
