@@ -480,12 +480,40 @@ export default function SimpleConverter() {
                 <CardContent>
                   <div className="space-y-4">
                     {subscriptionStatus.has_active_subscription ? (
-                      <div className="text-center py-4">
-                        <div className="text-green-600 font-semibold mb-2">{t('converter.unlimitedConversions')}</div>
-                        <p className="text-sm text-gray-600">
-                          {t('converter.unlimitedAccess')}
-                        </p>
-                      </div>
+                      <>
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">{t('converter.conversionsUsed')}</span>
+                            <span className="font-medium">
+                              {subscriptionStatus.conversions_used} / {subscriptionStatus.conversions_limit}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                              className={`h-2.5 rounded-full ${
+                                subscriptionStatus.conversions_used >= (subscriptionStatus.conversions_limit || 0)
+                                  ? 'bg-red-600'
+                                  : subscriptionStatus.conversions_used >= (subscriptionStatus.conversions_limit || 0) * 0.8
+                                  ? 'bg-yellow-500'
+                                  : 'bg-green-600'
+                              }`}
+                              style={{
+                                width: `${Math.min(
+                                  (subscriptionStatus.conversions_used / (subscriptionStatus.conversions_limit || 1)) * 100,
+                                  100
+                                )}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                        {!subscriptionStatus.can_convert && (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                            <p className="text-sm text-yellow-800 mb-2">
+                              {t('converter.monthlyLimitReached')}
+                            </p>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <>
                         <div>
