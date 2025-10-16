@@ -41,10 +41,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
-      signInFallbackRedirectUrl="/convert"
-      signUpFallbackRedirectUrl="/convert"
-      signInForceRedirectUrl="/convert"
-      signUpForceRedirectUrl="/convert"
+      // Note: Redirect URLs are handled at component level (SignIn/SignUp pages)
+      // to support language-specific routing (e.g., /en/convert, /pl/convert)
     >
       <QueryClientProvider client={queryClient}>
         <App />
