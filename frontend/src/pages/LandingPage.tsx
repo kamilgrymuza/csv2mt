@@ -250,7 +250,7 @@ export default function LandingPage() {
               <Button
                 variant="primary"
                 className="w-full"
-                onClick={() => isSignedIn ? handleNavigation('/subscription') : handleNavigation('/sign-up?redirect_url=/subscription')}
+                onClick={() => isSignedIn ? handleNavigation('/subscription') : handleNavigation(`/sign-up?redirect_url=/${i18n.language}/subscription`)}
               >
                 {t('common.goPremium')}
               </Button>
@@ -333,7 +333,7 @@ export default function LandingPage() {
           <Button
             variant="secondary"
             className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg"
-            onClick={() => handleNavigation('/sign-up?redirect_url=/subscription')}
+            onClick={() => handleNavigation(`/sign-up?redirect_url=/${i18n.language}/subscription`)}
           >
             {t('common.registerForPremium')}
           </Button>

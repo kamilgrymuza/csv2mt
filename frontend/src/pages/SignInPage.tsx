@@ -8,9 +8,15 @@ export default function SignInPage() {
   const [searchParams] = useSearchParams()
   const lang = i18n.language || 'en'
 
-  // Get redirect URL from query params, default to /convert
-  const redirectPath = searchParams.get('redirect_url') || '/convert'
-  const redirectUrl = `/${lang}${redirectPath}`
+  // Get redirect URL from query params
+  // If it already includes language (e.g., /en/subscription), use as-is
+  // Otherwise, prepend language (e.g., /convert -> /en/convert)
+  const redirectParam = searchParams.get('redirect_url')
+  const redirectUrl = redirectParam
+    ? (redirectParam.startsWith(`/${lang}/`) || redirectParam.startsWith('/en/') || redirectParam.startsWith('/pl/')
+        ? redirectParam  // Already has language prefix
+        : `/${lang}${redirectParam}`)  // Add language prefix
+    : `/${lang}/convert`  // Default
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
