@@ -157,9 +157,9 @@ async def auto_convert_document(
         )
 
     except ValueError as e:
-        logger.error("Value error during parsing: %s", str(e))
+        # Don't log here - let FastAPI handle it
         raise HTTPException(status_code=400, detail=str(e))
 
     except Exception as e:
-        logger.error("Unexpected error during auto-conversion: %s", str(e), exc_info=True)
+        # Don't log here - let FastAPI handle it
         raise HTTPException(status_code=500, detail=f"Auto-conversion error: {str(e)}")
