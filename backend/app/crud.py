@@ -147,7 +147,7 @@ def user_can_convert(db: Session, user_id: int) -> bool:
 
 def get_user_usage_stats(db: Session, user_id: int) -> dict:
     """Get user usage statistics"""
-    from ..services.stripe_service import StripeService
+    from .services.stripe_service import StripeService
 
     subscription = get_subscription_by_user_id(db, user_id)
     has_subscription = user_has_active_subscription(db, user_id)
