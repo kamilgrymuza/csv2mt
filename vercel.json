@@ -1,9 +1,11 @@
 {
-  "rewrites": [
+  "redirects": [
     {
       "source": "/",
-      "destination": "/en/index.html"
-    },
+      "destination": "/en/"
+    }
+  ],
+  "rewrites": [
     {
       "source": "/en",
       "destination": "/en/index.html"
