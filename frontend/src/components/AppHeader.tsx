@@ -81,7 +81,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
             <svg className="h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
             </svg>
-            <h1 className="text-xl font-bold text-gray-900">Statement Converter</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t('common.appTitle')}</h1>
           </button>
 
           <div className="flex items-center space-x-6">
@@ -135,7 +135,7 @@ export default function AppHeader({ showNavLinks = false }: AppHeaderProps) {
                 <button
                   onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                   className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Account menu"
+                  aria-label={t('common.accountMenu')}
                 >
                   <svg
                     className="w-6 h-6 text-gray-600"

@@ -307,7 +307,7 @@ export default function SimpleConverter() {
                         {t('converter.dragDropTitle')}
                       </p>
                       <div className={`text-sm ${isDragOver ? 'text-blue-600' : 'text-gray-600'}`}>
-                        <span>or </span>
+                        <span>{t('common.or')}</span>
                         <label className="relative cursor-pointer font-medium text-blue-600 hover:text-blue-500">
                           <span>{t('converter.browseFromDisk')}</span>
                           <input

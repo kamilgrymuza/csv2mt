@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-react'
 import { Navigate } from 'react-router-dom'
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -8,6 +9,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isSignedIn, isLoaded } = useAuth()
+  const { t } = useTranslation()
 
   if (!isLoaded) {
     return (
@@ -17,7 +19,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         alignItems: 'center',
         minHeight: '100vh'
       }}>
-        <div>Loading...</div>
+        <div>{t('common.loading')}</div>
       </div>
     )
   }

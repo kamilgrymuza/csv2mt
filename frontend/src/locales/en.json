@@ -1,12 +1,16 @@
 {
   "common": {
     "appName": "CSV2MT",
+    "appTitle": "Statement Converter",
     "signIn": "Sign In",
     "signUp": "Sign Up",
     "getStarted": "Get Started",
     "convertFiles": "Convert Files",
     "goPremium": "Go Premium",
-    "registerForPremium": "Register for Premium"
+    "registerForPremium": "Register for Premium",
+    "loading": "Loading...",
+    "or": "or ",
+    "accountMenu": "Account menu"
   },
   "header": {
     "features": "Features",
@@ -85,7 +89,11 @@
     "cancelAnytime": "You can cancel your subscription at any time.",
     "errorLoadingTitle": "Error Loading Subscription Status",
     "checkoutCanceled": "Subscription checkout was canceled",
-    "subscriptionActivated": "Subscription activated successfully!"
+    "subscriptionActivated": "Subscription activated successfully!",
+    "errors": {
+      "checkoutFailed": "Failed to create checkout session",
+      "portalFailed": "Failed to open subscription management"
+    }
   },
   "landing": {
     "hero": {

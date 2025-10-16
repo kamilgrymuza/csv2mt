@@ -1,12 +1,16 @@
 {
   "common": {
     "appName": "CSV2MT",
+    "appTitle": "Konwerter wyciągów",
     "signIn": "Zaloguj się",
     "signUp": "Zarejestruj się",
     "getStarted": "Rozpocznij",
     "convertFiles": "Konwertuj pliki",
     "goPremium": "Przejdź na Premium",
-    "registerForPremium": "Zarejestruj się Premium"
+    "registerForPremium": "Zarejestruj się Premium",
+    "loading": "Ładowanie...",
+    "or": "lub ",
+    "accountMenu": "Menu konta"
   },
   "header": {
     "features": "Funkcje",
@@ -85,7 +89,11 @@
     "cancelAnytime": "Możesz anulować subskrypcję w dowolnym momencie.",
     "errorLoadingTitle": "Błąd podczas ładowania statusu subskrypcji",
     "checkoutCanceled": "Proces zakupu subskrypcji został anulowany",
-    "subscriptionActivated": "Subskrypcja została pomyślnie aktywowana!"
+    "subscriptionActivated": "Subskrypcja została pomyślnie aktywowana!",
+    "errors": {
+      "checkoutFailed": "Nie udało się utworzyć sesji zakupu",
+      "portalFailed": "Nie udało się otworzyć zarządzania subskrypcją"
+    }
   },
   "landing": {
     "hero": {

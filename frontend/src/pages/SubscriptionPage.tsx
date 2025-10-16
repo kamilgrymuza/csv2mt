@@ -103,7 +103,7 @@ export default function SubscriptionPage() {
       window.location.href = response.data.url
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string } } }
-      message.error(axiosError.response?.data?.detail || 'Failed to create checkout session')
+      message.error(axiosError.response?.data?.detail || t('subscription.errors.checkoutFailed'))
       setIsCreatingCheckout(false)
     }
   }
@@ -131,7 +131,7 @@ export default function SubscriptionPage() {
       window.location.href = response.data.url
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string } } }
-      message.error(axiosError.response?.data?.detail || 'Failed to open subscription management')
+      message.error(axiosError.response?.data?.detail || t('subscription.errors.portalFailed'))
       setIsCreatingPortal(false)
     }
   }
