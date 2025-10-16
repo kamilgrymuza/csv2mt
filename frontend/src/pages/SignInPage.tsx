@@ -38,6 +38,7 @@ export default function SignInPage() {
           path={`/${lang}/sign-in`}
           signUpUrl={`/${lang}/sign-up`}
           forceRedirectUrl={`/${lang}/convert`}
+          fallbackRedirectUrl={`/${lang}/convert`}
           appearance={{
             elements: {
               rootBox: {
