@@ -45,7 +45,7 @@ export default function SubscriptionPage() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false)
   const [isCreatingPortal, setIsCreatingPortal] = useState(false)
 
@@ -132,7 +132,7 @@ export default function SubscriptionPage() {
 
   // Show success message after successful subscription
   if (success === 'true') {
-    message.success('Subscription activated successfully!')
+    message.success(t('subscription.subscriptionActivated'))
     // Clear query param
     navigate('/subscription', { replace: true })
     refetch()
@@ -140,7 +140,7 @@ export default function SubscriptionPage() {
 
   // Show canceled message
   if (canceled === 'true') {
-    message.info('Subscription checkout was canceled')
+    message.info(t('subscription.checkoutCanceled'))
     navigate('/subscription', { replace: true })
   }
 
@@ -151,10 +151,10 @@ export default function SubscriptionPage() {
       <Content style={{ padding: '48px 24px', background: '#f5f5f5' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <Title level={2} style={{ textAlign: 'center', marginBottom: '8px' }}>
-            Manage Your Subscription
+            {t('subscription.pageTitle')}
           </Title>
           <Paragraph style={{ textAlign: 'center', fontSize: '16px', color: '#666', marginBottom: '48px' }}>
-            Your gateway to unlimited file conversions and premium features.
+            {t('subscription.pageSubtitle')}
           </Paragraph>
 
           {isLoading ? (
@@ -163,7 +163,7 @@ export default function SubscriptionPage() {
             </div>
           ) : error ? (
             <Alert
-              message="Error Loading Subscription Status"
+              message={t('subscription.errorLoadingTitle')}
               description={error.message}
               type="error"
               showIcon
@@ -173,7 +173,7 @@ export default function SubscriptionPage() {
               {/* Current Plan */}
               <Col xs={24} lg={subscriptionStatus?.has_active_subscription ? 12 : 12}>
                 <Card
-                  title="Current Plan"
+                  title={t('subscription.currentPlan')}
                   style={{ height: '100%' }}
                   headStyle={{ fontSize: '20px', fontWeight: 600 }}
                 >
@@ -181,18 +181,20 @@ export default function SubscriptionPage() {
                     {subscriptionStatus?.has_active_subscription ? (
                       <>
                         <Tag color={subscriptionStatus.cancel_at_period_end ? "orange" : "green"} style={{ fontSize: '16px', padding: '8px 16px' }}>
-                          {subscriptionStatus.cancel_at_period_end ? "Premium Plan (Canceling)" : "Premium Plan"}
+                          {subscriptionStatus.cancel_at_period_end ? t('subscription.premiumPlanCanceling') : t('subscription.premiumPlanTag')}
                         </Tag>
 
                         {subscriptionStatus.cancel_at_period_end && subscriptionStatus.current_period_end ? (
                           <Alert
-                            message="Subscription Canceling"
+                            message={t('subscription.subscriptionCanceling')}
                             description={
                               <Space direction="vertical" size="small">
-                                <Text>Your subscription will cancel on {new Date(subscriptionStatus.current_period_end).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.</Text>
-                                <Text>You will retain Premium access until then.</Text>
-                                <Text strong>No refunds for the current billing period.</Text>
-                                <Text type="secondary" style={{ fontSize: '12px' }}>To reactivate, click "Manage Subscription" below.</Text>
+                                <Text>{t('subscription.cancelingOn', {
+                                  date: new Date(subscriptionStatus.current_period_end).toLocaleDateString(i18n.language === 'pl' ? 'pl-PL' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                                })}</Text>
+                                <Text>{t('subscription.retainAccess')}</Text>
+                                <Text strong>{t('subscription.noRefunds')}</Text>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>{t('subscription.reactivateInfo')}</Text>
                               </Space>
                             }
                             type="warning"
@@ -200,8 +202,8 @@ export default function SubscriptionPage() {
                           />
                         ) : (
                           <Alert
-                            message="Unlimited Conversions"
-                            description="You have unlimited access to all conversion features"
+                            message={t('subscription.unlimitedConversionsTitle')}
+                            description={t('subscription.unlimitedConversionsDesc')}
                             type="success"
                             showIcon
                             icon={<CheckCircleOutlined />}
@@ -212,11 +214,14 @@ export default function SubscriptionPage() {
                       <>
                         <div>
                           <Tag color="blue" style={{ fontSize: '16px', padding: '8px 16px' }}>
-                            Free Plan
+                            {t('subscription.freePlanTag')}
                           </Tag>
                           <Paragraph style={{ marginTop: '16px', marginBottom: '8px' }}>
                             <Text strong>
-                              {subscriptionStatus?.conversions_used} / {subscriptionStatus?.conversions_limit} free conversions used
+                              {t('subscription.conversionsUsedLabel', {
+                                used: subscriptionStatus?.conversions_used,
+                                limit: subscriptionStatus?.conversions_limit
+                              })}
                             </Text>
                           </Paragraph>
                           <Progress
@@ -228,8 +233,8 @@ export default function SubscriptionPage() {
 
                         {!subscriptionStatus?.can_convert && (
                           <Alert
-                            message="Limit Reached"
-                            description="You've used all your free conversions for this month. Upgrade to Premium for unlimited access."
+                            message={t('subscription.limitReachedTitle')}
+                            description={t('subscription.limitReachedDesc')}
                             type="warning"
                             showIcon
                           />
@@ -241,7 +246,7 @@ export default function SubscriptionPage() {
                     {subscriptionStatus?.has_active_subscription && (
                       <Card
                         type="inner"
-                        title="Payment Information"
+                        title={t('subscription.paymentInformation')}
                         extra={
                           <Button
                             type="link"
@@ -249,7 +254,7 @@ export default function SubscriptionPage() {
                             onClick={handleManageSubscription}
                             loading={isCreatingPortal}
                           >
-                            Manage
+                            {t('subscription.manage')}
                           </Button>
                         }
                       >
@@ -257,7 +262,7 @@ export default function SubscriptionPage() {
                           <Text>
                             <CreditCardOutlined /> Visa **** 4242
                           </Text>
-                          <Text type="secondary">Expires 12/2025</Text>
+                          <Text type="secondary">{t('subscription.expiresLabel', { date: '12/2025' })}</Text>
                         </Space>
                       </Card>
                     )}
@@ -270,7 +275,7 @@ export default function SubscriptionPage() {
                         loading={isCreatingPortal}
                         block
                       >
-                        Manage Subscription
+                        {t('subscription.manageSubscriptionButton')}
                       </Button>
                     )}
                   </Space>
@@ -283,7 +288,7 @@ export default function SubscriptionPage() {
                   <Card
                     title={
                       <Text style={{ fontSize: '20px', fontWeight: 600, color: '#1890ff' }}>
-                        Upgrade to Premium
+                        {t('subscription.upgradeToPremiumTitle')}
                       </Text>
                     }
                     style={{ height: '100%', borderColor: '#1890ff' }}
@@ -291,32 +296,32 @@ export default function SubscriptionPage() {
                   >
                     <Space direction="vertical" size="large" style={{ width: '100%' }}>
                       <Text style={{ fontSize: '16px', color: '#666' }}>
-                        Unlock the full potential of our converter.
+                        {t('subscription.upgradeToPremiumDesc')}
                       </Text>
 
                       <div>
                         <Title level={2} style={{ margin: 0, display: 'inline' }}>
-                          {i18n.language === 'pl' ? '19,99 zł' : '$4.99'}
+                          {i18n.language === 'pl' ? t('landing.pricing.premium.price') : t('landing.pricing.premium.price')}
                         </Title>
-                        <Text style={{ fontSize: '16px', color: '#666' }}> / month</Text>
+                        <Text style={{ fontSize: '16px', color: '#666' }}> {t('subscription.perMonth')}</Text>
                       </div>
 
                       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '18px' }} />
-                          <Text>Unlimited file conversions</Text>
+                          <Text>{t('subscription.feature1')}</Text>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '18px' }} />
-                          <Text>Support for all major banks</Text>
+                          <Text>{t('subscription.feature2')}</Text>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '18px' }} />
-                          <Text>Batch processing for multiple files</Text>
+                          <Text>{t('subscription.feature3')}</Text>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '18px' }} />
-                          <Text>Priority customer support</Text>
+                          <Text>{t('subscription.feature4')}</Text>
                         </div>
                       </Space>
 
@@ -329,11 +334,11 @@ export default function SubscriptionPage() {
                         block
                         style={{ height: '50px', fontSize: '16px' }}
                       >
-                        Upgrade to Premium
+                        {t('subscription.upgradeToPremiumButton')}
                       </Button>
 
                       <Text type="secondary" style={{ fontSize: '12px', textAlign: 'center', display: 'block' }}>
-                        You can cancel your subscription at any time.
+                        {t('subscription.cancelAnytime')}
                       </Text>
                     </Space>
                   </Card>
