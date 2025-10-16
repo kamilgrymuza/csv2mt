@@ -104,9 +104,12 @@ export default function SubscriptionPage() {
       setIsCreatingPortal(true)
       const token = await getToken()
 
+      const lang = i18n.language || 'en'
+      const returnUrl = `${window.location.origin}/${lang}/subscription`
+
       const response = await axios.post(
         `${API_URL}/subscription/create-portal-session`,
-        {},
+        { return_url: returnUrl },
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -134,14 +137,16 @@ export default function SubscriptionPage() {
   if (success === 'true') {
     message.success(t('subscription.subscriptionActivated'))
     // Clear query param
-    navigate('/subscription', { replace: true })
+    const lang = i18n.language || 'en'
+    navigate(`/${lang}/subscription`, { replace: true })
     refetch()
   }
 
   // Show canceled message
   if (canceled === 'true') {
     message.info(t('subscription.checkoutCanceled'))
-    navigate('/subscription', { replace: true })
+    const lang = i18n.language || 'en'
+    navigate(`/${lang}/subscription`, { replace: true })
   }
 
   return (

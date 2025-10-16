@@ -91,6 +91,7 @@ async def create_checkout_session(
 
 @router.post("/create-portal-session")
 async def create_portal_session(
+    request: Request,
     current_user: User = Depends(verify_token),
     db: Session = Depends(get_db)
 ):
@@ -108,8 +109,13 @@ async def create_portal_session(
                 detail="No subscription found. Please subscribe first."
             )
 
+        # Get return_url from request body if provided
+        body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+        return_url = body.get("return_url")
+
         portal_url = StripeService.create_portal_session(
-            customer_id=subscription.stripe_customer_id
+            customer_id=subscription.stripe_customer_id,
+            return_url=return_url
         )
 
         return {"url": portal_url}
