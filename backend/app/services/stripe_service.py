@@ -162,6 +162,58 @@ class StripeService:
         return session.url
 
     @staticmethod
+    def sync_subscription_from_stripe(db: Session, subscription: Subscription) -> bool:
+        """
+        Sync subscription details from Stripe API (useful for missing period dates)
+
+        Args:
+            db: Database session
+            subscription: Local subscription object
+
+        Returns:
+            True if successful
+        """
+        try:
+            if not subscription.stripe_subscription_id:
+                return False
+
+            # Fetch subscription from Stripe
+            stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+
+            # Update period dates if they exist in Stripe
+            if stripe_sub.get("current_period_start"):
+                subscription.current_period_start = datetime.fromtimestamp(
+                    stripe_sub["current_period_start"],
+                    tz=datetime.now().astimezone().tzinfo
+                ).replace(tzinfo=None)
+
+            if stripe_sub.get("current_period_end"):
+                subscription.current_period_end = datetime.fromtimestamp(
+                    stripe_sub["current_period_end"],
+                    tz=datetime.now().astimezone().tzinfo
+                ).replace(tzinfo=None)
+
+            # Update status
+            if stripe_sub.get("status"):
+                status_map = {
+                    "active": SubscriptionStatus.ACTIVE,
+                    "canceled": SubscriptionStatus.CANCELED,
+                    "incomplete": SubscriptionStatus.INCOMPLETE,
+                    "incomplete_expired": SubscriptionStatus.INCOMPLETE_EXPIRED,
+                    "past_due": SubscriptionStatus.PAST_DUE,
+                    "trialing": SubscriptionStatus.TRIALING,
+                    "unpaid": SubscriptionStatus.UNPAID,
+                }
+                subscription.status = status_map.get(stripe_sub["status"])
+
+            subscription.cancel_at_period_end = stripe_sub.get("cancel_at_period_end", False)
+
+            db.commit()
+            return True
+        except StripeError:
+            return False
+
+    @staticmethod
     def cancel_subscription(subscription_id: str) -> bool:
         """
         Cancel a Stripe subscription
