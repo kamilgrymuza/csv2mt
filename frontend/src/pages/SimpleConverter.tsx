@@ -254,7 +254,7 @@ export default function SimpleConverter() {
       <AppHeader />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Converter Section */}
           <div className="lg:col-span-2">
