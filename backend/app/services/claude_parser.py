@@ -401,6 +401,14 @@ IMPORTANT:
 
         print(f"   ✓ Parsed {len(result['transactions'])} transactions")
 
+        # Add token usage from format detection step
+        if '_token_usage' in format_spec:
+            if 'metadata' not in result:
+                result['metadata'] = {}
+            result['metadata']['input_tokens'] = format_spec['_token_usage']['input_tokens']
+            result['metadata']['output_tokens'] = format_spec['_token_usage']['output_tokens']
+            print(f"   ✓ Tokens: {format_spec['_token_usage']['input_tokens']:,} input, {format_spec['_token_usage']['output_tokens']:,} output")
+
         # If we got very few or zero transactions, the format spec might be wrong
         # This can happen with PDFs where text extraction creates multi-line entries
         # instead of tabular data. Fall back to AI-based extraction.
@@ -589,6 +597,8 @@ Sample file content:
                 messages=[{"role": "user", "content": prompt + first_lines}]
             )
             response_text = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
         else:  # OpenAI
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o",
@@ -596,6 +606,8 @@ Sample file content:
                 messages=[{"role": "user", "content": prompt + first_lines}]
             )
             response_text = response.choices[0].message.content
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
 
         # Parse JSON response
         try:
@@ -610,6 +622,13 @@ Sample file content:
                 response_text = response_text.replace('```', '')
 
             format_spec = json.loads(response_text.strip())
+
+            # Add token usage to format spec so it can be tracked
+            format_spec['_token_usage'] = {
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens
+            }
+
             return format_spec
         except json.JSONDecodeError as e:
             print(f"Failed to parse format specification: {e}")
