@@ -988,8 +988,9 @@ Document content:
                         print(f"   Skipping malformed transaction: {line[:100]}")
                         continue
 
+        # Empty statements (no transactions) are valid - return empty list
         if not transactions:
-            raise ValueError("No transactions found in response")
+            print("   ℹ️  No transactions found (empty statement)")
 
         return {
             "transactions": transactions,
