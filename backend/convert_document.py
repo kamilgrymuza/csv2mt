@@ -30,13 +30,10 @@ from rich.json import JSON
 
 # MT940 parsing library
 try:
-    # Try the newer mt-940 library first
     import mt940
-    if hasattr(mt940, 'parse'):
-        MT940_PARSER = 'mt940'
-    else:
-        MT940_PARSER = None
+    MT940_PARSER = 'mt940'
 except ImportError:
+    mt940 = None
     MT940_PARSER = None
 
 # Our custom parser

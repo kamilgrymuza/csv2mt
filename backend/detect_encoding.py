@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Utility script to detect the encoding of an MT940 file
+Utility script to detect the encoding of a file
+
+This script uses the centralized encoding detection utility to analyze file encodings.
 
 Usage:
     python detect_encoding.py <file_path>
@@ -11,116 +13,33 @@ Example:
 
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
 
+# Add the backend directory to the path so we can import app modules
+sys.path.insert(0, str(Path(__file__).parent))
 
-def detect_encoding(file_path: str) -> Tuple[Optional[str], str]:
-    """
-    Detect the encoding of a file by trying multiple common encodings
-
-    Args:
-        file_path: Path to the file to analyze
-
-    Returns:
-        Tuple of (detected_encoding, sample_text)
-    """
-    path = Path(file_path)
-
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    # Read file as bytes
-    with open(path, 'rb') as f:
-        raw_data = f.read()
-
-    # Common encodings to try (in order of likelihood)
-    encodings = [
-        'utf-8',
-        'utf-8-sig',  # UTF-8 with BOM
-        'latin-1',    # ISO-8859-1 (Western European)
-        'cp1252',     # Windows-1252 (Western European)
-        'iso-8859-1', # Alternative name for latin-1
-        'iso-8859-2', # Central/Eastern European
-        'cp1250',     # Windows Central/Eastern European
-        'utf-16',
-        'utf-16-le',
-        'utf-16-be',
-    ]
-
-    results = []
-
-    for encoding in encodings:
-        try:
-            decoded_text = raw_data.decode(encoding)
-
-            # Count how many non-ASCII characters
-            non_ascii = sum(1 for c in decoded_text if ord(c) > 127)
-            ascii_ratio = (len(decoded_text) - non_ascii) / len(decoded_text) if decoded_text else 0
-
-            # Check for common MT940 markers
-            has_mt940_markers = any(marker in decoded_text for marker in [':20:', ':25:', ':60F:', ':61:', ':62F:'])
-
-            # Count replacement characters (indicates bad encoding)
-            replacement_chars = decoded_text.count('\ufffd')
-
-            results.append({
-                'encoding': encoding,
-                'success': True,
-                'text': decoded_text,
-                'ascii_ratio': ascii_ratio,
-                'has_mt940_markers': has_mt940_markers,
-                'replacement_chars': replacement_chars,
-                'length': len(decoded_text)
-            })
-
-        except (UnicodeDecodeError, UnicodeError):
-            results.append({
-                'encoding': encoding,
-                'success': False
-            })
-
-    # Filter successful decodings
-    successful = [r for r in results if r['success']]
-
-    if not successful:
-        return None, "Could not decode file with any common encoding"
-
-    # Score each encoding
-    for result in successful:
-        score = 0
-
-        # Prefer encodings with MT940 markers
-        if result['has_mt940_markers']:
-            score += 100
-
-        # Prefer encodings with no replacement characters
-        if result['replacement_chars'] == 0:
-            score += 50
-        else:
-            score -= result['replacement_chars'] * 10
-
-        # Prefer higher ASCII ratio (most MT940 files are mostly ASCII)
-        score += result['ascii_ratio'] * 20
-
-        result['score'] = score
-
-    # Sort by score
-    successful.sort(key=lambda r: r['score'], reverse=True)
-
-    best = successful[0]
-    return best['encoding'], best['text']
+from app.services.encoding_detector import decode_file_content, EncodingDetectionError
 
 
 def analyze_file(file_path: str):
     """Analyze and display encoding information for a file"""
     print(f"Analyzing: {file_path}\n")
 
-    try:
-        encoding, text = detect_encoding(file_path)
+    path = Path(file_path)
+    if not path.exists():
+        print(f"❌ File not found: {file_path}")
+        return
 
-        if encoding is None:
-            print(f"❌ {text}")
-            return
+    try:
+        # Read file as bytes
+        with open(path, 'rb') as f:
+            content = f.read()
+
+        # Detect encoding using centralized utility
+        text, encoding = decode_file_content(
+            content,
+            min_confidence=0.7,
+            filename=file_path
+        )
 
         print(f"✅ Detected encoding: {encoding}")
         print(f"   File size: {len(text)} characters")
@@ -148,6 +67,9 @@ def analyze_file(file_path: str):
             samples = list(non_ascii_chars)[:10]
             print(f"   Samples: {', '.join(repr(c) for c in samples)}")
 
+    except EncodingDetectionError as e:
+        print(f"❌ Encoding detection failed:")
+        print(f"   {e}")
     except Exception as e:
         print(f"❌ Error: {e}")
 

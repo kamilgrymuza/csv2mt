@@ -19,6 +19,14 @@ import PyPDF2
 import openpyxl
 
 from ..config import settings
+from .encoding_detector import decode_file_content, EncodingDetectionError
+
+# Import OpenAI if available
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 
 class Transaction:
@@ -52,12 +60,31 @@ class Transaction:
 
 
 class ClaudeDocumentParser:
-    """Service for parsing documents using Claude AI"""
+    """Service for parsing documents using AI (Claude or OpenAI)"""
 
-    def __init__(self):
-        if not settings.anthropic_api_key:
-            raise ValueError("ANTHROPIC_API_KEY not configured")
-        self.client = Anthropic(api_key=settings.anthropic_api_key)
+    def __init__(self, model: Optional[str] = None):
+        """Initialize parser with specified AI model
+
+        Args:
+            model: AI model to use (claude-sonnet, claude-haiku, gpt-4o)
+                   If None, uses settings.ai_model
+        """
+        self.model = model or settings.ai_model
+
+        if self.model.startswith("claude"):
+            if not settings.anthropic_api_key:
+                raise ValueError("ANTHROPIC_API_KEY not configured")
+            self.client = Anthropic(api_key=settings.anthropic_api_key)
+            self.openai_client = None
+        elif self.model.startswith("gpt"):
+            if not OPENAI_AVAILABLE:
+                raise ValueError("OpenAI package not installed. Run: pip install openai")
+            if not settings.openai_api_key:
+                raise ValueError("OPENAI_API_KEY not configured")
+            self.openai_client = OpenAI(api_key=settings.openai_api_key)
+            self.client = None
+        else:
+            raise ValueError(f"Unsupported model: {self.model}")
 
     def parse_document(
         self,
@@ -81,13 +108,13 @@ class ClaudeDocumentParser:
         # Extract text content based on file type
         if file_type == "csv":
             text_content = self._extract_csv_content(file_content)
-            result = self._parse_with_claude_text(text_content, account_number)
+            result = self._parse_with_claude_text(text_content, account_number, file_type="csv")
         elif file_type == "pdf":
-            text_content = self._extract_pdf_content(file_content)
-            result = self._parse_with_claude_text(text_content, account_number)
+            # Send PDF directly to Claude (preserves visual layout)
+            result = self._parse_pdf_with_vision(file_content, account_number)
         elif file_type in ["xls", "xlsx"]:
             text_content = self._extract_excel_content(file_content)
-            result = self._parse_with_claude_text(text_content, account_number)
+            result = self._parse_with_claude_text(text_content, account_number, file_type="excel")
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
@@ -106,19 +133,165 @@ class ClaudeDocumentParser:
         return extension
 
     def _extract_csv_content(self, file_content: BinaryIO) -> str:
-        """Extract text from CSV file"""
+        """
+        Extract text from CSV file with automatic encoding detection.
+
+        Uses charset-normalizer to reliably detect the file encoding.
+        Fails explicitly if encoding cannot be detected with sufficient confidence
+        rather than guessing, which ensures accurate data extraction.
+
+        For CSV files, we use a lower confidence threshold (50%) because:
+        - CSV files are often small with limited text
+        - Limited text makes statistical detection less reliable
+        - Even with lower confidence, charset-normalizer is still more accurate
+          than blind fallback attempts
+
+        Raises:
+            EncodingDetectionError: If encoding cannot be detected reliably
+        """
         content = file_content.read()
-        # Try different encodings
-        for encoding in ['utf-8', 'latin-1', 'cp1252']:
-            try:
-                text = content.decode(encoding)
-                return text
-            except UnicodeDecodeError:
-                continue
-        raise ValueError("Unable to decode CSV file")
+
+        # Use centralized encoding detection with 50% minimum confidence for CSV
+        # (CSV files are typically small, making statistical detection harder)
+        #
+        # Prioritize Eastern European encodings (windows-1250, iso-8859-2) over
+        # Western European ones (cp1252, latin-1) when confidence scores are close,
+        # as many banking systems in Central/Eastern Europe use these encodings
+        text, detected_encoding = decode_file_content(
+            content,
+            min_confidence=0.5,
+            filename="CSV file",
+            prioritize_encodings=['windows-1250', 'cp1250', 'iso-8859-2']
+        )
+
+        print(f"✓ Detected CSV encoding: {detected_encoding}")
+        return text
+
+    def _parse_pdf_with_vision(self, file_content: BinaryIO, account_number: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Parse PDF by sending it directly to Claude with vision.
+        This preserves the visual layout and table structure.
+
+        Args:
+            file_content: Binary PDF content
+            account_number: Optional account number
+
+        Returns:
+            Dict with transactions and metadata
+        """
+        print("📄 Processing PDF with Claude vision API...")
+
+        # Read PDF as bytes
+        pdf_bytes = file_content.read()
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        prompt = """You are a financial document parser. Analyze this bank statement PDF and extract ALL transaction data.
+
+Look at the visual table structure carefully and extract every transaction.
+
+Output format - CSV with properly quoted fields:
+
+METADATA,account_number,currency,statement_start_date,statement_end_date,opening_balance,closing_balance
+TXN,date,amount,"description",transaction_type,reference,balance
+TXN,date,amount,"description",transaction_type,reference,balance
+...
+
+Example output:
+METADATA,PL12345678,PLN,2024-01-01,2024-01-31,1000.00,500.00
+TXN,2024-01-15,-100.50,"Amazon Purchase",DEBIT,REF123,899.50
+TXN,2024-01-16,500.00,"Salary Deposit",CREDIT,SAL2024,1399.50
+
+Field details:
+- account_number: remove ALL whitespace from IBANs
+- currency: 3-letter ISO code (USD/EUR/GBP/PLN) - look for symbols €,$,£,zł
+- date: YYYY-MM-DD format
+- amount: negative for debits/money out, positive for credits/money in
+- description: MUST be quoted, combine relevant columns (see CRITICAL rules below)
+- transaction_type: CREDIT or DEBIT
+- reference: transaction reference number (empty if not available)
+- balance: account balance after transaction (empty if not available)
+
+CRITICAL - Description Field Extraction Rules:
+1. Extract the COMPLETE, FULL text from counterparty and title/description cells
+2. Include ALL text visible in the cells - do NOT summarize, abbreviate, or omit any parts
+3. If a table has separate columns for:
+   - Counterparty/payee (who): Extract the ENTIRE cell content
+   - Title/description (what): Extract the ENTIRE cell content
+   - Combine them as: "counterparty - title" (with space-dash-space separator)
+4. ONLY remove 26-digit bank account numbers (IBAN-like numbers) from the description
+5. KEEP all other information including:
+   - NIP/tax ID numbers
+   - Invoice numbers
+   - Reference codes
+   - ALL other details visible in the cells
+6. Be CONSISTENT - extract the same level of detail for every transaction
+
+Examples of correct extraction:
+- "Pomorska Fundacja Filmowa w Gdyni - NIP/5862147548/FAKTURA PROFORMA 128/2025" ✓
+- "PROWIZJE I OPŁATY-POZOSTAŁE I/616 - opł. za opinię bankową" ✓
+- "Adam Cioczek - 1 rata wynagrodzenia za przeniesienie praw do treatmentu filmu Przejście z godnie z rachunkiem z dnia 12.09.2025" ✓
+
+IMPORTANT:
+- Return ONLY the CSV format, no other text or explanations
+- ALWAYS quote description fields
+- Extract ALL transactions from ALL pages
+- Use the visual table structure to correctly identify columns
+- Be DETERMINISTIC - always extract the same information from the same cells"""
+
+        # Call Claude with PDF document
+        if self.client:  # Claude (Anthropic)
+            model_name = "claude-sonnet-4-5-20250929" if self.model == "claude-sonnet" else "claude-3-5-haiku-20241022"
+            response = self.client.messages.create(
+                model=model_name,
+                max_tokens=8192,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }]
+            )
+            response_text = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+        else:
+            raise ValueError("PDF vision parsing currently only supported with Claude (Anthropic API)")
+
+        # Parse CSV response
+        try:
+            result = self._parse_pipe_delimited_response(response_text)
+
+            # Add token usage to metadata
+            if "metadata" not in result:
+                result["metadata"] = {}
+            result["metadata"]["input_tokens"] = input_tokens
+            result["metadata"]["output_tokens"] = output_tokens
+
+            print(f"   ✓ Extracted {len(result.get('transactions', []))} transactions")
+            print(f"   ✓ Tokens: {input_tokens:,} input, {output_tokens:,} output")
+
+            return result
+
+        except Exception as e:
+            print(f"   ✗ Failed to parse CSV response: {e}")
+            print(f"   Response: {response_text[:500]}")
+            raise ValueError(f"AI returned invalid CSV: {str(e)}")
 
     def _extract_pdf_content(self, file_content: BinaryIO) -> str:
-        """Extract text from PDF file"""
+        """
+        Extract text from PDF file (fallback method, not used when vision API is available)
+        """
         pdf_reader = PyPDF2.PdfReader(file_content)
         text_parts = []
         for page in pdf_reader.pages:
@@ -176,29 +349,69 @@ class ClaudeDocumentParser:
     def _parse_with_claude_text(
         self,
         text_content: str,
-        account_number: Optional[str] = None
+        account_number: Optional[str] = None,
+        file_type: str = "csv"
     ) -> Dict[str, Any]:
         """
-        Use Claude AI to extract transaction data from text content.
-        Automatically handles large files by splitting into chunks.
+        Parse text content using appropriate method based on file type.
+
+        For CSV/Excel: Two-step approach (format spec + Python parsing)
+        For PDF: Direct AI extraction (PDFs have multi-line formats)
 
         Args:
             text_content: The text extracted from the document
             account_number: Optional account number
+            file_type: Type of file (csv, pdf, excel)
 
         Returns:
             Dict with transactions and metadata
         """
-        # Check if we need to chunk the file (more than 100 lines after header)
         lines = text_content.split('\n')
-        needs_chunking = len(lines) > 120  # 20 header + 100 data lines
+        total_lines = len(lines)
 
-        if needs_chunking:
-            print(f"📄 Large file detected ({len(lines)} lines). Processing in chunks...")
-            return self._parse_large_file_in_chunks(text_content, account_number)
+        # PDFs need AI-based extraction (multi-line transaction formats)
+        if file_type == "pdf":
+            print(f"📄 Processing PDF with {total_lines} lines using AI extraction...")
+            if total_lines > 120:
+                return self._parse_large_file_in_chunks(text_content, account_number)
+            return self._parse_single_chunk(text_content, account_number)
 
-        # For small files, process normally
-        return self._parse_single_chunk(text_content, account_number)
+        # CSV/Excel files use two-step approach
+        print(f"📄 Processing {file_type.upper()} file with {total_lines} lines using two-step approach...")
+
+        # Step 1: Extract format specification from first 50 lines
+        print("   Step 1: Analyzing file format with AI...")
+        first_lines = '\n'.join(lines[:50])
+
+        try:
+            format_spec = self._extract_format_specification(first_lines)
+            print(f"   ✓ Format detected: {format_spec['format']['delimiter']}-delimited, "
+                  f"transactions start at row {format_spec['format']['transaction_start_row']}")
+        except Exception as e:
+            print(f"   ⚠️  Format extraction failed: {e}")
+            print("   Falling back to old chunking method...")
+            # Fallback to old method if format extraction fails
+            if total_lines > 120:
+                return self._parse_large_file_in_chunks(text_content, account_number)
+            return self._parse_single_chunk(text_content, account_number)
+
+        # Step 2: Parse full file with Python using format specification
+        print("   Step 2: Parsing all transactions with Python...")
+        result = self._parse_with_format_spec(text_content, format_spec)
+
+        print(f"   ✓ Parsed {len(result['transactions'])} transactions")
+
+        # If we got very few or zero transactions, the format spec might be wrong
+        # This can happen with PDFs where text extraction creates multi-line entries
+        # instead of tabular data. Fall back to AI-based extraction.
+        if len(result['transactions']) == 0:
+            print("   ⚠️  No transactions found - format spec may be incorrect")
+            print("   Falling back to AI-based extraction (better for PDFs)...")
+            if total_lines > 120:
+                return self._parse_large_file_in_chunks(text_content, account_number)
+            return self._parse_single_chunk(text_content, account_number)
+
+        return result
 
     def _parse_large_file_in_chunks(
         self,
@@ -268,6 +481,333 @@ class ClaudeDocumentParser:
             "metadata": merged_metadata
         }
 
+    def _extract_format_specification(self, first_lines: str) -> Dict[str, Any]:
+        """
+        Analyze the first lines of a file to extract format specification.
+        This uses AI to understand the file structure, then Python does the actual parsing.
+
+        Args:
+            first_lines: First ~50 lines of the file
+
+        Returns:
+            Dict containing format specification with:
+            - metadata: account, currency, dates, balances
+            - format: delimiter, quote_char, encoding, date_format
+            - columns: mapping of column indices to field names
+            - transaction_start_row: row number where transactions begin
+            - amount_rules: how to interpret amounts (negative=debit, decimal separator, etc.)
+        """
+        prompt = """You are a financial document format analyzer. Analyze this sample from a bank statement and extract the file format specification.
+
+Your task is to understand the structure and return a JSON specification that Python code can use to parse the full file.
+
+Return ONLY valid JSON with this exact structure:
+
+{
+  "metadata": {
+    "account_number": "account number (remove all spaces from IBANs)",
+    "currency": "3-letter ISO code (USD/EUR/GBP/PLN) - look for symbols €,$,£,zł",
+    "statement_start_date": "YYYY-MM-DD or null",
+    "statement_end_date": "YYYY-MM-DD or null",
+    "opening_balance": 1000.00 or null,
+    "closing_balance": 500.00 or null
+  },
+  "format": {
+    "delimiter": "," or ";" or "\\t" or "|",
+    "quote_char": "\\"" or "'" or null,
+    "has_header_row": true or false,
+    "transaction_start_row": 15,
+    "date_format": "%Y-%m-%d" or "%d.%m.%Y" or "%m/%d/%Y" etc,
+    "decimal_separator": "." or ",",
+    "thousands_separator": "," or "." or " " or null
+  },
+  "columns": {
+    "date": 0,
+    "amount": 8,
+    "amount_fallback_columns": [10, 12],
+    "description": 2,
+    "description_parts": {
+      "counterparty": 2,
+      "title": 3
+    },
+    "reference": 7,
+    "balance": null,
+    "transaction_type": null,
+    "currency": 9
+  },
+  "amount_rules": {
+    "negative_means_debit": true,
+    "separate_debit_credit_columns": false,
+    "debit_column": null,
+    "credit_column": null,
+    "multiple_amount_columns": false,
+    "check_all_amount_columns": [8, 10, 12]
+  },
+  "notes": "Any important observations about the format"
+}
+
+Field details:
+- transaction_start_row: The row index (0-based) where actual transaction data begins
+- columns: Map field names to column indices (0-based). Use null if column doesn't exist
+- columns.description: Primary description column index (will be used if description_parts is not specified)
+- columns.description_parts: OPTIONAL object with counterparty and title column indices. Use this when the statement has separate columns for:
+  - counterparty: The other party in the transaction (e.g., "Dane kontrahenta", "Payee", "Merchant")
+  - title: The transaction title/purpose (e.g., "Tytuł", "Description", "Purpose")
+  If both exist, they will be concatenated as: "counterparty title"
+- columns.amount_fallback_columns: Array of alternative column indices to check if primary amount column is empty
+- amount_rules.negative_means_debit: true if negative amounts = money out, false if positive = money out
+- amount_rules.separate_debit_credit_columns: true if debits and credits are in different columns
+- amount_rules.check_all_amount_columns: If multiple amount columns exist (like col 8, 10, 12), list ALL of them. Parser will use first non-empty value.
+
+CRITICAL - Multiple Amount Columns:
+Some bank statements have MULTIPLE amount columns (e.g., "Transaction Amount", "Block Amount", "Foreign Currency Amount").
+Look at the actual DATA rows to see which column contains values for most transactions.
+If different transactions use different amount columns, set amount_rules.check_all_amount_columns to list ALL possible amount columns.
+
+IMPORTANT:
+- Return ONLY the JSON, no other text
+- Be precise with row/column indices (0-based)
+- Look at ACTUAL DATA rows, not just headers - headers can be misleading
+- If unsure which column has the amount, list multiple columns in check_all_amount_columns
+- CRITICAL FOR DESCRIPTIONS: Check if the statement has SEPARATE columns for:
+  1. The counterparty/payee/merchant (who you paid or who paid you)
+  2. The transaction purpose/title/description (what the payment was for)
+  If BOTH exist as separate columns, use description_parts to specify both column indices.
+  If only one combined description column exists, use the simple description field.
+  When in doubt, prefer description_parts if you see any separation of counterparty vs purpose.
+
+Sample file content:
+
+"""
+
+        # Call AI model to extract format
+        if self.client:  # Claude
+            model_name = "claude-sonnet-4-5-20250929" if self.model == "claude-sonnet" else "claude-3-5-haiku-20241022"
+            response = self.client.messages.create(
+                model=model_name,
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt + first_lines}]
+            )
+            response_text = response.content[0].text
+        else:  # OpenAI
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt + first_lines}]
+            )
+            response_text = response.choices[0].message.content
+
+        # Parse JSON response
+        try:
+            # Extract JSON from response (might have markdown code blocks)
+            import re
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+            if json_match:
+                response_text = json_match.group(1)
+            elif '```' in response_text:
+                # Remove any code block markers
+                response_text = re.sub(r'```[a-z]*\s*', '', response_text)
+                response_text = response_text.replace('```', '')
+
+            format_spec = json.loads(response_text.strip())
+            return format_spec
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse format specification: {e}")
+            print(f"Response: {response_text[:500]}")
+            raise ValueError(f"AI returned invalid JSON: {str(e)}")
+
+    def _parse_with_format_spec(
+        self,
+        text_content: str,
+        format_spec: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Parse the full file using Python based on the format specification.
+        This is fast and has no token limits.
+
+        Args:
+            text_content: Full file content
+            format_spec: Format specification from _extract_format_specification
+
+        Returns:
+            Dict with transactions and metadata
+        """
+        import re
+        from datetime import datetime
+        from io import StringIO
+
+        lines = text_content.split('\n')
+        transactions = []
+
+        # Extract format details
+        delimiter = format_spec['format']['delimiter']
+        quote_char = format_spec['format'].get('quote_char')
+        start_row = format_spec['format']['transaction_start_row']
+        date_format = format_spec['format']['date_format']
+        decimal_sep = format_spec['format'].get('decimal_separator', '.')
+        thousands_sep = format_spec['format'].get('thousands_separator')
+
+        # Column mappings
+        col_map = format_spec['columns']
+        amount_rules = format_spec['amount_rules']
+
+        # Process transaction rows
+        for i, line in enumerate(lines[start_row:], start=start_row):
+            if not line.strip():
+                continue
+
+            try:
+                # Parse CSV line
+                if quote_char:
+                    reader = csv.reader(StringIO(line), delimiter=delimiter, quotechar=quote_char)
+                else:
+                    reader = csv.reader(StringIO(line), delimiter=delimiter)
+
+                row = next(reader)
+
+                # Skip if not enough columns - flatten any list values for comparison
+                max_col_indices = []
+                for v in col_map.values():
+                    if v is None:
+                        continue
+                    elif isinstance(v, dict):
+                        # Handle nested dicts like description_parts
+                        for nested_v in v.values():
+                            if nested_v is not None and isinstance(nested_v, int):
+                                max_col_indices.append(nested_v)
+                    elif isinstance(v, list):
+                        max_col_indices.extend([x for x in v if isinstance(x, int)])
+                    elif isinstance(v, int):
+                        max_col_indices.append(v)
+
+                if max_col_indices and len(row) <= max(max_col_indices):
+                    continue
+
+                # Extract fields
+                date_str = row[col_map['date']].strip() if col_map['date'] is not None else None
+
+                # Extract description - support both simple and multi-part descriptions
+                desc = ""
+                if 'description_parts' in col_map and col_map['description_parts']:
+                    # Multi-part description (e.g., counterparty + title)
+                    parts = col_map['description_parts']
+                    desc_components = []
+
+                    if 'counterparty' in parts and parts['counterparty'] is not None and parts['counterparty'] < len(row):
+                        counterparty = row[parts['counterparty']].strip()
+                        if counterparty:
+                            desc_components.append(counterparty)
+
+                    if 'title' in parts and parts['title'] is not None and parts['title'] < len(row):
+                        title = row[parts['title']].strip()
+                        if title:
+                            desc_components.append(title)
+
+                    desc = " ".join(desc_components)
+                elif col_map.get('description') is not None:
+                    # Simple single-column description
+                    desc = row[col_map['description']].strip() if col_map['description'] < len(row) else ""
+
+                ref = row[col_map['reference']].strip() if col_map['reference'] is not None and col_map['reference'] < len(row) else None
+                balance_str = row[col_map['balance']].strip() if col_map['balance'] is not None and col_map['balance'] < len(row) else None
+
+                # Parse amount - handle multiple possible amount columns
+                amount = None
+
+                if amount_rules.get('separate_debit_credit_columns'):
+                    debit_str = row[amount_rules['debit_column']].strip() if amount_rules['debit_column'] < len(row) else ""
+                    credit_str = row[amount_rules['credit_column']].strip() if amount_rules['credit_column'] < len(row) else ""
+
+                    if debit_str:
+                        debit_str = debit_str.replace(thousands_sep, '') if thousands_sep else debit_str
+                        debit_str = debit_str.replace(decimal_sep, '.')
+                        amount = -abs(float(re.sub(r'[^\d.-]', '', debit_str)))
+                    elif credit_str:
+                        credit_str = credit_str.replace(thousands_sep, '') if thousands_sep else credit_str
+                        credit_str = credit_str.replace(decimal_sep, '.')
+                        amount = abs(float(re.sub(r'[^\d.-]', '', credit_str)))
+                else:
+                    # Check if we need to look in multiple amount columns
+                    amount_columns = amount_rules.get('check_all_amount_columns', [col_map.get('amount')])
+                    if not isinstance(amount_columns, list):
+                        amount_columns = [amount_columns]
+
+                    # Try each amount column until we find a non-empty value
+                    for amt_col in amount_columns:
+                        if amt_col is None or amt_col >= len(row):
+                            continue
+
+                        amount_str = row[amt_col].strip()
+                        if amount_str and amount_str not in ['', '-', '0', '0,00', '0.00']:
+                            try:
+                                amount_str = amount_str.replace(thousands_sep, '') if thousands_sep else amount_str
+                                amount_str = amount_str.replace(decimal_sep, '.')
+                                amount = float(re.sub(r'[^\d.-]', '', amount_str))
+                                break  # Found valid amount, stop looking
+                            except (ValueError, AttributeError):
+                                continue
+
+                # Skip transaction if no valid amount found
+                if amount is None:
+                    continue
+
+                # Parse date
+                if date_str:
+                    try:
+                        date_obj = datetime.strptime(date_str, date_format)
+                        date = date_obj.strftime('%Y-%m-%d')
+                    except ValueError:
+                        # Try common fallback formats
+                        for fmt in ['%Y-%m-%d', '%d.%m.%Y', '%m/%d/%Y', '%d/%m/%Y']:
+                            try:
+                                date_obj = datetime.strptime(date_str, fmt)
+                                date = date_obj.strftime('%Y-%m-%d')
+                                break
+                            except ValueError:
+                                continue
+                        else:
+                            print(f"   Skipping transaction with invalid date: {date_str}")
+                            continue
+                else:
+                    continue
+
+                # Parse balance
+                balance = None
+                if balance_str:
+                    try:
+                        balance_str = balance_str.replace(thousands_sep, '') if thousands_sep else balance_str
+                        balance_str = balance_str.replace(decimal_sep, '.')
+                        balance = float(re.sub(r'[^\d.-]', '', balance_str))
+                    except (ValueError, AttributeError):
+                        pass
+
+                # Determine transaction type
+                if amount < 0:
+                    txn_type = "DEBIT"
+                elif amount > 0:
+                    txn_type = "CREDIT"
+                else:
+                    txn_type = "OTHER"
+
+                # Create transaction
+                transactions.append({
+                    "date": date,
+                    "amount": amount,
+                    "description": desc,
+                    "transaction_type": txn_type,
+                    "reference": ref if ref else None,
+                    "balance": balance
+                })
+
+            except (IndexError, ValueError) as e:
+                # Skip malformed rows silently
+                continue
+
+        return {
+            "transactions": transactions,
+            "metadata": format_spec['metadata']
+        }
+
     def _parse_single_chunk(
         self,
         text_content: str,
@@ -326,23 +866,37 @@ Document content:
 
 """
 
-        response = self.client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=8192,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt + text_content
-                }
-            ]
-        )
+        # Call appropriate AI model
+        if self.client:  # Claude
+            model_name = "claude-sonnet-4-5-20250929" if self.model == "claude-sonnet" else "claude-3-5-haiku-20241022"
+            response = self.client.messages.create(
+                model=model_name,
+                max_tokens=8192,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt + text_content
+                    }
+                ]
+            )
+            response_text = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
 
-        # Extract pipe-delimited response
-        response_text = response.content[0].text
-
-        # Capture token usage for cost analysis
-        input_tokens = response.usage.input_tokens
-        output_tokens = response.usage.output_tokens
+        else:  # OpenAI
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                max_tokens=8192,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt + text_content
+                    }
+                ]
+            )
+            response_text = response.choices[0].message.content
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
 
         # Parse pipe-delimited format
         try:

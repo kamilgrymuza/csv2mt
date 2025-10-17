@@ -21,6 +21,7 @@ from typing import List, Dict, Tuple
 import mt940
 
 from app.services.claude_parser import ClaudeDocumentParser
+from app.services.encoding_detector import decode_file_content, EncodingDetectionError
 
 
 class MT940Comparator:
@@ -543,35 +544,36 @@ class TestEndToEndBankComparison:
         assert len(statement_files) > 0, f"No statement file found in {test_case_dir}"
         statement_file = statement_files[0]
 
-        # Load expected MT940 - try multiple encodings
+        # Load expected MT940 with automatic encoding detection
         expected_mt940_file = test_case_dir / "expected.mt940"
         assert expected_mt940_file.exists(), f"Expected MT940 not found: {expected_mt940_file}"
 
-        # Try different encodings (banks may use different character sets)
-        detected_encoding = None
-        for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'utf-8-sig']:
-            try:
-                expected_mt940_content = expected_mt940_file.read_text(encoding=encoding)
-                detected_encoding = encoding
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise ValueError(
-                f"Could not decode {expected_mt940_file} with any common encoding.\n"
-                f"Run: docker-compose exec backend python detect_encoding.py {expected_mt940_file}"
+        try:
+            with open(expected_mt940_file, 'rb') as f:
+                expected_mt940_bytes = f.read()
+
+            expected_mt940_content, detected_encoding = decode_file_content(
+                expected_mt940_bytes,
+                min_confidence=0.7,
+                filename=str(expected_mt940_file)
             )
 
-        print(f"\n📄 Expected MT940 encoding: {detected_encoding}")
+            print(f"\n📄 Expected MT940 encoding: {detected_encoding}")
 
-        # Normalize expected MT940 to UTF-8 (if not already UTF-8)
-        if detected_encoding != 'utf-8':
-            print(f"   Converting from {detected_encoding} to UTF-8 for comparison")
-            # Already decoded as Unicode string, now we just ensure it's UTF-8 compatible
-            # Re-save as UTF-8 for future comparisons
-            expected_mt940_utf8_file = test_case_dir / "expected_utf8.mt940"
-            expected_mt940_utf8_file.write_text(expected_mt940_content, encoding='utf-8')
-            print(f"   Saved UTF-8 version: {expected_mt940_utf8_file.name}")
+            # Normalize expected MT940 to UTF-8 (if not already UTF-8)
+            if detected_encoding.lower() != 'utf-8':
+                print(f"   Converting from {detected_encoding} to UTF-8 for comparison")
+                # Re-save as UTF-8 for future comparisons
+                expected_mt940_utf8_file = test_case_dir / "expected_utf8.mt940"
+                expected_mt940_utf8_file.write_text(expected_mt940_content, encoding='utf-8')
+                print(f"   Saved UTF-8 version: {expected_mt940_utf8_file.name}")
+
+        except EncodingDetectionError as e:
+            raise ValueError(
+                f"Could not detect encoding of {expected_mt940_file} with sufficient confidence.\n"
+                f"Error: {e}\n"
+                f"Please ensure the file is properly encoded."
+            )
 
         # Parse statement with Claude AI
         parser = ClaudeDocumentParser()

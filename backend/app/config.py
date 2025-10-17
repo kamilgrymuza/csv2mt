@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # Claude AI configuration
     anthropic_api_key: Optional[str] = None
 
+    # OpenAI configuration
+    openai_api_key: Optional[str] = None
+
+    # AI model selection (claude-sonnet, claude-haiku, gpt-4o)
+    ai_model: str = "claude-sonnet"
+
     class Config:
         env_file = ".env"
 
