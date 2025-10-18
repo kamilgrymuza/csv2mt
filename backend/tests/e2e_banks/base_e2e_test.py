@@ -53,7 +53,7 @@ class BaseE2ETest:
         """Path where generated MT940 will be written"""
         return test_dir / "output.mt940"
 
-    def run_conversion_test(self, input_file, expected_mt940, output_mt940, allow_empty=False):
+    def run_conversion_test(self, input_file, expected_mt940, output_mt940, allow_empty=False, expect_exception=None):
         """
         Run the complete conversion test pipeline.
 
@@ -62,6 +62,8 @@ class BaseE2ETest:
             expected_mt940: Path to expected MT940 file
             output_mt940: Path where generated MT940 will be written
             allow_empty: Whether to allow empty statements (no transactions)
+            expect_exception: If set, expect this exception type to be raised during MT940 conversion
+                            Format: (ExceptionType, "expected message substring")
         """
         bank_display_name = self.bank_name or "Bank Statement"
 
@@ -85,10 +87,35 @@ class BaseE2ETest:
 
         if not allow_empty:
             assert len(result['transactions']) > 0, "No transactions parsed from file"
-        assert result['metadata'].get('account_number'), "No account number extracted"
+
+        # If we expect an exception during conversion, skip normal validations
+        if not expect_exception:
+            assert result['metadata'].get('account_number'), "No account number extracted"
 
         # Step 2: Convert to MT940
         print(f"\nStep 2: Converting to MT940 format")
+
+        # If we expect an exception during conversion, verify it's raised
+        if expect_exception:
+            exception_type, expected_message = expect_exception
+            print(f"   ℹ️  Expecting {exception_type.__name__} with message containing: '{expected_message}'")
+
+            try:
+                mt940_content = parser.convert_to_mt940(result)
+                assert False, f"Expected {exception_type.__name__} to be raised, but conversion succeeded"
+            except exception_type as e:
+                error_message = str(e)
+                print(f"   ✓ Expected exception raised: {exception_type.__name__}")
+                print(f"   ✓ Error message: {error_message}")
+
+                if expected_message not in error_message:
+                    assert False, f"Exception message doesn't contain expected substring.\nExpected: '{expected_message}'\nActual: '{error_message}'"
+
+                print(f"\n" + "="*80)
+                print("✅ E2E TEST PASSED (Exception verified)")
+                print("="*80)
+                return
+
         mt940_content = parser.convert_to_mt940(result)
 
         assert mt940_content, "MT940 conversion produced empty output"

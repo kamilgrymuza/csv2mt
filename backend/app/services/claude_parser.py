@@ -1170,6 +1170,14 @@ Document content:
             # Fallback if no date available - use timestamp
             field_20_ref = datetime.now().strftime("%y%m%d%H%M%S")[:16]
 
+        # Validate that we have minimum required data for valid MT940
+        if not start_date or not end_date:
+            raise ValueError(
+                "Cannot generate valid MT940: missing statement dates. "
+                "A valid MT940 requires at least opening and closing balance fields (:60F: and :62F:) with dates. "
+                f"start_date={start_date}, end_date={end_date}"
+            )
+
         # Header
         mt940_lines.append(f":20:{field_20_ref}")
         mt940_lines.append(f":25:{acc_num}")
@@ -1212,6 +1220,11 @@ Document content:
             description = txn.get("description", "").replace("\n", " ")
             # Sanitize whitespace: replace multiple spaces with single space
             description = re.sub(r'\s+', ' ', description).strip()
+
+            # If description is empty, use "-" as placeholder
+            if not description:
+                description = "-"
+
             # Split long descriptions across multiple lines (SWIFT MT940 spec: 6*65x)
             max_lines = 6
             line_length = 65
@@ -1221,10 +1234,9 @@ Document content:
                 desc_lines.append(description[i:i+line_length])
 
             # First line starts with :86:, continuation lines don't have the tag
-            if desc_lines:
-                mt940_lines.append(f":86:{desc_lines[0]}")
-                for continuation_line in desc_lines[1:]:
-                    mt940_lines.append(continuation_line)
+            mt940_lines.append(f":86:{desc_lines[0]}")
+            for continuation_line in desc_lines[1:]:
+                mt940_lines.append(continuation_line)
 
         # Closing balance
         if end_date:
