@@ -40,6 +40,7 @@
     "converting": "Konwertowanie...",
     "convertFiles": "Konwertuj pliki",
     "clear": "Wyczyść",
+    "convertedWithCount": "Przekonwertowano pomyślnie ({{count}} transakcji)",
     "freePlan": "Plan darmowy",
     "premiumPlan": "Plan Premium",
     "unlimitedConversions": "✓ Nieograniczone konwersje",

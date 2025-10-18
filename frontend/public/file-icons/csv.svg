@@ -1,0 +1,5 @@
+<svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M28 0H4C1.79086 0 0 1.79086 0 4V44C0 46.2091 1.79086 48 4 48H36C38.2091 48 40 46.2091 40 44V12L28 0Z" fill="#3B82F6"/>
+  <path opacity="0.3" d="M28 0V8C28 10.2091 29.7909 12 32 12H40L28 0Z" fill="white"/>
+  <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="600" fill="white">CSV</text>
+</svg>

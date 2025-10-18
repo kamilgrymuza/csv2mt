@@ -155,6 +155,12 @@ export default function SimpleConverter() {
         ? originalName.substring(0, extensionIndex) + '.mt940'
         : originalName + '.mt940'
 
+      // Get transaction count from response headers
+      const transactionCount = response.headers['x-transaction-count']
+      const successMessage = transactionCount
+        ? t('converter.convertedWithCount', { count: transactionCount })
+        : t('converter.convertedSuccessfully')
+
       // Update status to success
       setSelectedFiles(prev => prev.map((f, i) =>
         i === index ? {
@@ -163,7 +169,7 @@ export default function SimpleConverter() {
           progress: 100,
           downloadUrl,
           filename,
-          message: t('converter.convertedSuccessfully')
+          message: successMessage
         } : f
       ))
 
@@ -411,17 +417,11 @@ export default function SimpleConverter() {
                         {/* File icon */}
                         <div className="flex-shrink-0">
                           {fileStatus.file.type === 'application/pdf' || fileStatus.file.name.toLowerCase().endsWith('.pdf') ? (
-                            <svg className="h-8 w-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                            </svg>
+                            <img src="/file-icons/pdf.svg" alt="PDF" className="h-8 w-8" />
                           ) : (fileStatus.file.name.toLowerCase().endsWith('.xls') || fileStatus.file.name.toLowerCase().endsWith('.xlsx')) ? (
-                            <svg className="h-8 w-8 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                            </svg>
+                            <img src="/file-icons/xls.svg" alt="Excel" className="h-8 w-8" />
                           ) : (
-                            <svg className="h-8 w-8 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                            </svg>
+                            <img src="/file-icons/csv.svg" alt="CSV" className="h-8 w-8" />
                           )}
                         </div>
 

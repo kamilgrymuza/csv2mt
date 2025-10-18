@@ -40,6 +40,7 @@
     "converting": "Converting...",
     "convertFiles": "Convert Files",
     "clear": "Clear",
+    "convertedWithCount": "Converted successfully ({{count}} transactions)",
     "freePlan": "Free Plan",
     "premiumPlan": "Premium Plan",
     "unlimitedConversions": "✓ Unlimited Conversions",

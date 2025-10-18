@@ -171,6 +171,10 @@ async def auto_convert_document(
             usage_record.success = True
             db.commit()
 
+        # Get transaction count for frontend display
+        transaction_count = len(parsed_data.get('transactions', []))
+        logger.info("Conversion successful: %d transactions", transaction_count)
+
         # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
 
@@ -179,7 +183,8 @@ async def auto_convert_document(
             media_type="application/octet-stream",
             headers={
                 "Content-Disposition": f"attachment; filename={output_filename}",
-                "Content-Type": "text/plain; charset=utf-8"
+                "Content-Type": "text/plain; charset=utf-8",
+                "X-Transaction-Count": str(transaction_count)
             }
         )
 
