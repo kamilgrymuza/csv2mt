@@ -12,6 +12,7 @@ import base64
 import csv
 import io
 import json
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional, BinaryIO
 from anthropic import Anthropic
@@ -555,7 +556,11 @@ Return ONLY valid JSON with this exact structure:
 }
 
 Field details:
-- transaction_start_row: The row index (0-based) where actual transaction data begins
+- transaction_start_row: The row index (0-based) where the FIRST actual transaction data row begins.
+  CRITICAL: This must point to the FIRST row containing actual transaction data, NOT a header/label row.
+  Headers with "#" prefix or column names like "#Data operacji" are NOT transaction rows.
+  Transaction rows typically start with dates (e.g., "2025-07-18;", "2024-10-06;").
+  Count row numbers carefully from 0. If transactions start on line 28, set this to 27 (0-based).
 - columns: Map field names to column indices (0-based). Use null if column doesn't exist
 - columns.description: Primary description column index (will be used if description_parts is not specified)
 - columns.description_parts: OPTIONAL object with counterparty and title column indices. Use this when the statement has separate columns for:
@@ -583,6 +588,28 @@ IMPORTANT:
   If BOTH exist as separate columns, use description_parts to specify both column indices.
   If only one combined description column exists, use the simple description field.
   When in doubt, prefer description_parts if you see any separation of counterparty vs purpose.
+
+CRITICAL - Finding transaction_start_row (MOST IMPORTANT):
+Transaction data forms a CONTINUOUS BLOCK with consistent structure. To find where it starts:
+1. Scan through the file looking for rows that contain transaction dates in the first data column
+2. Transaction dates look like: "2025-07-18", "2025-06-13", "2024-10-06", etc.
+3. The row IMMEDIATELY BEFORE the first transaction typically has:
+   - A header row starting with "#" (like "#Data operacji;#Opis operacji;...")
+   - OR column names (like "Date;Description;Amount")
+   - OR a blank line
+4. Find the VERY FIRST row that has a date in the transaction date column - that's transaction_start_row
+5. CRITICAL: Do NOT skip rows even if multiple consecutive rows have the same date
+   Example: If you see:
+   - Row 25: "#Data operacji;#Opis operacji;..."  (header with #)
+   - Row 26: "2025-07-18;KAMIL GRYMUZA..."        (FIRST transaction)
+   - Row 27: "2025-07-18;KAMIL GRYMUZA..."        (second transaction, same date)
+   - Row 28: "2025-06-13;KAMIL GRYMUZA..."        (third transaction, different date)
+   Then transaction_start_row = 26 (NOT 27, even though both 26 and 27 have the same date!)
+6. The rule: transaction_start_row = first row with a date that comes AFTER a non-date row (header/blank)
+7. VERIFY YOUR ANSWER: After determining transaction_start_row, check that:
+   - The row before it does NOT start with a date
+   - The row you selected DOES start with a date
+   - You are not skipping any date rows - include ALL transactions from the first date onwards
 
 Sample file content:
 
@@ -1160,6 +1187,8 @@ Document content:
 
             # Transaction details - Field 86: max 6 lines of 65 characters each
             description = txn.get("description", "").replace("\n", " ")
+            # Sanitize whitespace: replace multiple spaces with single space
+            description = re.sub(r'\s+', ' ', description).strip()
             # Split long descriptions across multiple lines (SWIFT MT940 spec: 6*65x)
             max_lines = 6
             line_length = 65
