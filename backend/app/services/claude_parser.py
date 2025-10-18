@@ -22,6 +22,16 @@ import openpyxl
 from ..config import settings
 from .encoding_detector import decode_file_content, EncodingDetectionError
 
+
+class EmptyStatementError(ValueError):
+    """
+    Exception raised when a statement file contains no valid transaction data.
+
+    This is an expected error condition (not a bug) and should NOT be logged to Sentry.
+    It indicates that the user uploaded a file that doesn't contain parseable transaction data.
+    """
+    pass
+
 # Import OpenAI if available
 try:
     from openai import OpenAI
@@ -416,13 +426,19 @@ IMPORTANT:
 
         print(f"   ✓ Parsed {len(result['transactions'])} transactions")
 
-        # Add token usage from format detection step
+        # Add token usage and format specification from format detection step
         if '_token_usage' in format_spec:
             if 'metadata' not in result:
                 result['metadata'] = {}
             result['metadata']['input_tokens'] = format_spec['_token_usage']['input_tokens']
             result['metadata']['output_tokens'] = format_spec['_token_usage']['output_tokens']
             print(f"   ✓ Tokens: {format_spec['_token_usage']['input_tokens']:,} input, {format_spec['_token_usage']['output_tokens']:,} output")
+
+        # Store format specification for debugging (remove token usage metadata first)
+        if 'metadata' not in result:
+            result['metadata'] = {}
+        format_spec_copy = {k: v for k, v in format_spec.items() if k != '_token_usage'}
+        result['metadata']['format_specification'] = format_spec_copy
 
         # If we got very few or zero transactions, the format spec might be wrong
         # This can happen with PDFs where text extraction creates multi-line entries
@@ -1183,10 +1199,9 @@ Document content:
 
         # Validate that we have minimum required data for valid MT940
         if not start_date or not end_date:
-            raise ValueError(
-                "Cannot generate valid MT940: missing statement dates. "
-                "A valid MT940 requires at least opening and closing balance fields (:60F: and :62F:) with dates. "
-                f"start_date={start_date}, end_date={end_date}"
+            raise EmptyStatementError(
+                "The uploaded file does not contain valid transaction data or statement dates. "
+                "Please ensure the file contains a bank statement with transaction information."
             )
 
         # Header

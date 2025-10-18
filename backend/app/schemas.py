@@ -91,6 +91,9 @@ class ConversionUsageCreate(BaseModel):
     bank_name: Optional[str] = None
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    format_specification: Optional[str] = None
 
 
 class ConversionUsage(ConversionUsageCreate):

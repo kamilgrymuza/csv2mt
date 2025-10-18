@@ -53,6 +53,12 @@
       "freeLimitReached": "You have reached your free conversion limit. Please upgrade to Premium.",
       "selectFiles": "Please select file(s)",
       "limitReachedUpgrade": "You have reached your free conversion limit. Please upgrade to continue."
+    },
+    "errors": {
+      "emptyStatement": "The uploaded file does not contain valid transaction data. Please ensure the file contains a bank statement with transaction information, including dates and transaction details.",
+      "validationError": "The file could not be processed. Please check that the file is a valid bank statement and try again.",
+      "conversionError": "An error occurred during conversion. Please try again or contact support if the problem persists.",
+      "unexpectedError": "An unexpected error occurred. Please try again later or contact support."
     }
   },
   "subscription": {

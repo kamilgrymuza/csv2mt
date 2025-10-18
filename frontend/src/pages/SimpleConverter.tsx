@@ -171,14 +171,85 @@ export default function SimpleConverter() {
       console.error('Conversion error:', error)
 
       let errorMessage = t('converter.conversionFailed')
+
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { status?: number; data?: { detail?: string } } }
-        if (axiosError.response?.status === 402) {
+        const axiosError = error as {
+          response?: {
+            status?: number;
+            data?: Blob | {
+              detail?: string;
+              error?: {
+                code?: string;
+                message?: string;
+              }
+            }
+          }
+        }
+
+        // When responseType is 'blob', error responses are also blobs
+        // We need to parse them as JSON
+        if (axiosError.response?.data instanceof Blob) {
+          try {
+            const text = await axiosError.response.data.text()
+            const errorData = JSON.parse(text)
+
+            // Handle structured error responses
+            if (errorData.error?.code) {
+              // Map error codes to translated messages
+              switch (errorData.error.code) {
+                case 'EMPTY_STATEMENT':
+                  errorMessage = t('converter.errors.emptyStatement')
+                  break
+                case 'VALIDATION_ERROR':
+                  errorMessage = t('converter.errors.validationError')
+                  break
+                case 'INTERNAL_ERROR':
+                  errorMessage = t('converter.errors.unexpectedError')
+                  break
+                default:
+                  // Use the backend message if available
+                  errorMessage = errorData.error.message || t('converter.errors.conversionError')
+              }
+            }
+            // Handle legacy error format
+            else if (errorData.detail) {
+              errorMessage = typeof errorData.detail === 'string'
+                ? errorData.detail
+                : t('converter.conversionFailed')
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError)
+            errorMessage = t('converter.errors.unexpectedError')
+          }
+        }
+        // Handle non-blob error responses (shouldn't happen with responseType: 'blob', but just in case)
+        else if (axiosError.response?.data && typeof axiosError.response.data === 'object') {
+          const data = axiosError.response.data as {
+            detail?: string;
+            error?: { code?: string; message?: string }
+          }
+
+          if (data.error?.code) {
+            switch (data.error.code) {
+              case 'EMPTY_STATEMENT':
+                errorMessage = t('converter.errors.emptyStatement')
+                break
+              case 'VALIDATION_ERROR':
+                errorMessage = t('converter.errors.validationError')
+                break
+              case 'INTERNAL_ERROR':
+                errorMessage = t('converter.errors.unexpectedError')
+                break
+              default:
+                errorMessage = data.error.message || t('converter.errors.conversionError')
+            }
+          } else if (data.detail) {
+            errorMessage = data.detail
+          }
+        }
+        // Handle HTTP 402 (payment required)
+        else if (axiosError.response?.status === 402) {
           errorMessage = t('converter.limitReached')
-        } else if (axiosError.response?.data?.detail) {
-          errorMessage = typeof axiosError.response.data.detail === 'string'
-            ? axiosError.response.data.detail
-            : t('converter.conversionFailed')
         }
       }
 

@@ -53,6 +53,12 @@
       "freeLimitReached": "Osiągnięto limit darmowych konwersji. Przejdź na Premium.",
       "selectFiles": "Proszę wybrać plik(i)",
       "limitReachedUpgrade": "Osiągnięto limit darmowych konwersji. Przejdź na wyższą wersję, aby kontynuować."
+    },
+    "errors": {
+      "emptyStatement": "Przesłany plik nie zawiera prawidłowych danych transakcji. Upewnij się, że plik zawiera wyciąg bankowy z informacjami o transakcjach, w tym datami i szczegółami transakcji.",
+      "validationError": "Nie można przetworzyć pliku. Sprawdź, czy plik jest prawidłowym wyciągiem bankowym i spróbuj ponownie.",
+      "conversionError": "Wystąpił błąd podczas konwersji. Spróbuj ponownie lub skontaktuj się z pomocą techniczną, jeśli problem będzie się powtarzał.",
+      "unexpectedError": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie później lub skontaktuj się z pomocą techniczną."
     }
   },
   "subscription": {

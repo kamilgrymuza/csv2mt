@@ -9,6 +9,22 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 
 # Initialize Sentry only for staging and production environments
 if settings.environment in ["staging", "production"] and settings.sentry_dsn:
+    from app.services.claude_parser import EmptyStatementError
+
+    def before_send(event, hint):
+        """
+        Filter out expected errors that should not be logged to Sentry.
+
+        These are user input issues, not bugs:
+        - EmptyStatementError: User uploaded a file without valid transaction data
+        """
+        if 'exc_info' in hint:
+            exc_type, exc_value, tb = hint['exc_info']
+            # Don't log EmptyStatementError - it's an expected user input error
+            if isinstance(exc_value, EmptyStatementError):
+                return None
+        return event
+
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
         environment=settings.environment,
@@ -26,6 +42,8 @@ if settings.environment in ["staging", "production"] and settings.sentry_dsn:
         send_default_pii=False,
         # Attach tracebacks
         attach_stacktrace=True,
+        # Filter out expected errors
+        before_send=before_send,
     )
 
 # Create database tables

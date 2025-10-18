@@ -74,6 +74,14 @@ class ConversionUsage(Base):
     input_tokens = Column(Integer, nullable=True)
     output_tokens = Column(Integer, nullable=True)
 
+    # Error tracking (for debugging and analytics)
+    error_code = Column(String, nullable=True)  # e.g., "EMPTY_STATEMENT", "VALIDATION_ERROR"
+    error_message = Column(Text, nullable=True)  # Full error message
+
+    # Format specification from Claude AI (for CSV/Excel files)
+    # This stores the JSON format spec produced by Claude for debugging
+    format_specification = Column(Text, nullable=True)  # JSON string
+
     # Usage tracking
     conversion_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

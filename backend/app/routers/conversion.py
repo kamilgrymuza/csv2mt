@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from typing import List, Optional
 from sqlalchemy.orm import Session
 import logging
@@ -8,7 +8,7 @@ import io
 from ..services import BankParserRegistry
 from ..services.parsers.base import BankParserError
 from ..services.mt940_converter import MT940Converter, MT940ConverterError
-from ..services.claude_parser import ClaudeDocumentParser
+from ..services.claude_parser import ClaudeDocumentParser, EmptyStatementError
 from ..dependencies import get_current_user_with_usage_check
 from ..database import get_db
 from ..models import User
@@ -108,6 +108,8 @@ async def auto_convert_document(
             detail=f"File must be one of: {', '.join(allowed_extensions)}"
         )
 
+    usage_record = None  # Track the usage record for error updates
+
     try:
         # Read file content
         content = await file.read()
@@ -124,25 +126,36 @@ async def auto_convert_document(
             account_number=account_number
         )
 
+        # Extract format specification for debugging (if available in metadata)
+        metadata = parsed_data.get("metadata", {})
+        format_spec_json = None
+        if metadata.get("format_specification"):
+            import json
+            try:
+                format_spec_json = json.dumps(metadata["format_specification"])
+            except (TypeError, ValueError):
+                logger.warning("Failed to serialize format specification for file %s", file.filename)
+
+        # Track conversion usage AFTER parsing succeeds (even if MT940 conversion fails)
+        # This ensures empty/invalid statements count towards usage since parsing consumed AI tokens
+        usage = ConversionUsageCreate(
+            user_id=current_user.id,
+            file_name=file.filename,
+            bank_name="auto-detected",
+            input_tokens=metadata.get("input_tokens"),
+            output_tokens=metadata.get("output_tokens"),
+            format_specification=format_spec_json
+        )
+        usage_record = crud.create_conversion_usage(db, usage)
+        logger.info("Auto-conversion tracked for user %s (input: %s, output: %s)",
+                   current_user.id, usage.input_tokens, usage.output_tokens)
+
         # Convert to MT940
         logger.info("Converting to MT940 format")
         mt940_content = parser.convert_to_mt940(
             transactions_data=parsed_data,
             account_number=account_number
         )
-
-        # Track conversion usage with token usage
-        metadata = parsed_data.get("metadata", {})
-        usage = ConversionUsageCreate(
-            user_id=current_user.id,
-            file_name=file.filename,
-            bank_name="auto-detected",
-            input_tokens=metadata.get("input_tokens"),
-            output_tokens=metadata.get("output_tokens")
-        )
-        crud.create_conversion_usage(db, usage)
-        logger.info("Auto-conversion tracked for user %s (input: %s, output: %s)",
-                   current_user.id, usage.input_tokens, usage.output_tokens)
 
         # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
@@ -156,10 +169,64 @@ async def auto_convert_document(
             }
         )
 
+    except EmptyStatementError as e:
+        # Expected error: file contains no valid transaction data
+        # Don't log to Sentry - this is a user input issue, not a bug
+        logger.info("Empty statement detected for file %s: %s", file.filename, str(e))
+
+        # Update usage record with error information
+        if usage_record:
+            usage_record.error_code = "EMPTY_STATEMENT"
+            usage_record.error_message = str(e)
+            db.commit()
+
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "code": "EMPTY_STATEMENT",
+                    "message": str(e),
+                    "details": "The uploaded file does not contain valid transaction data or statement dates."
+                }
+            }
+        )
+
     except ValueError as e:
-        # Don't log here - let FastAPI handle it
-        raise HTTPException(status_code=400, detail=str(e))
+        # Other validation errors
+        logger.warning("Validation error for file %s: %s", file.filename, str(e))
+
+        # Update usage record with error information
+        if usage_record:
+            usage_record.error_code = "VALIDATION_ERROR"
+            usage_record.error_message = str(e)
+            db.commit()
+
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": str(e)
+                }
+            }
+        )
 
     except Exception as e:
-        # Don't log here - let FastAPI handle it
-        raise HTTPException(status_code=500, detail=f"Auto-conversion error: {str(e)}")
+        # Unexpected errors - these WILL be logged to Sentry
+        logger.error("Unexpected error during auto-conversion for file %s: %s", file.filename, str(e))
+
+        # Update usage record with error information
+        if usage_record:
+            usage_record.error_code = "INTERNAL_ERROR"
+            usage_record.error_message = str(e)
+            db.commit()
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "An unexpected error occurred during conversion. Please try again later."
+                }
+            }
+        )
