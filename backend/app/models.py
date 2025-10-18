@@ -86,6 +86,13 @@ class ConversionUsage(Base):
     # e.g., "format_spec_python", "format_spec_fallback_ai", "pdf_vision", "ai_chunked", "ai_single"
     parsing_method = Column(String, nullable=True)
 
+    # File size metrics (for analytics and cost prediction)
+    file_line_count = Column(Integer, nullable=True)  # Number of lines in CSV/Excel files
+    file_page_count = Column(Integer, nullable=True)  # Number of pages in PDF files
+
+    # Conversion success tracking
+    success = Column(Boolean, nullable=True)  # True if conversion succeeded, False if failed
+
     # Usage tracking
     conversion_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

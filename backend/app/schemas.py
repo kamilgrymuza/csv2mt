@@ -95,6 +95,9 @@ class ConversionUsageCreate(BaseModel):
     error_message: Optional[str] = None
     format_specification: Optional[str] = None
     parsing_method: Optional[str] = None
+    file_line_count: Optional[int] = None
+    file_page_count: Optional[int] = None
+    success: Optional[bool] = None
 
 
 class ConversionUsage(ConversionUsageCreate):

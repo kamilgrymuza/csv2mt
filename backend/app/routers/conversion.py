@@ -151,7 +151,9 @@ async def auto_convert_document(
             input_tokens=metadata.get("input_tokens"),
             output_tokens=metadata.get("output_tokens"),
             format_specification=format_spec_json,
-            parsing_method=metadata.get("parsing_method")
+            parsing_method=metadata.get("parsing_method"),
+            file_line_count=metadata.get("file_line_count"),
+            file_page_count=metadata.get("file_page_count")
         )
         usage_record = crud.create_conversion_usage(db, usage)
         logger.info("Auto-conversion tracked for user %s (input: %s, output: %s, method: %s)",
@@ -163,6 +165,11 @@ async def auto_convert_document(
             transactions_data=parsed_data,
             account_number=account_number
         )
+
+        # Mark conversion as successful
+        if usage_record:
+            usage_record.success = True
+            db.commit()
 
         # Return MT940 file (encode as UTF-8)
         output_filename = f"{file.filename.rsplit('.', 1)[0]}.mt940"
@@ -185,6 +192,7 @@ async def auto_convert_document(
         if usage_record:
             usage_record.error_code = "EMPTY_STATEMENT"
             usage_record.error_message = str(e)
+            usage_record.success = False
             db.commit()
 
         return JSONResponse(
@@ -206,6 +214,7 @@ async def auto_convert_document(
         if usage_record:
             usage_record.error_code = "VALIDATION_ERROR"
             usage_record.error_message = str(e)
+            usage_record.success = False
             db.commit()
 
         return JSONResponse(
@@ -226,6 +235,7 @@ async def auto_convert_document(
         if usage_record:
             usage_record.error_code = "INTERNAL_ERROR"
             usage_record.error_message = str(e)
+            usage_record.success = False
             db.commit()
 
         return JSONResponse(

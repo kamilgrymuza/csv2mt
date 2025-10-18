@@ -128,7 +128,8 @@ class ClaudeDocumentParser:
             result = self._parse_pdf_with_vision(file_content, account_number)
         elif file_type in ["xls", "xlsx"]:
             text_content = self._extract_excel_content(file_content)
-            result = self._parse_with_claude_text(text_content, account_number, file_type="excel")
+            # Pass file_content so we can retry with CSV conversion if needed
+            result = self._parse_with_claude_text(text_content, account_number, file_type="excel", file_content=file_content)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
@@ -198,6 +199,12 @@ class ClaudeDocumentParser:
         # Read PDF as bytes
         pdf_bytes = file_content.read()
         pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        # Get page count for analytics
+        import io
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+        file_page_count = len(pdf_reader.pages)
+        print(f"   PDF has {file_page_count} page(s)")
 
         prompt = """You are a financial document parser. Analyze this bank statement PDF and extract ALL transaction data.
 
@@ -303,6 +310,7 @@ IMPORTANT:
             result["metadata"]["input_tokens"] = input_tokens
             result["metadata"]["output_tokens"] = output_tokens
             result["metadata"]["parsing_method"] = "pdf_vision"
+            result["metadata"]["file_page_count"] = file_page_count
 
             print(f"   ✓ Extracted {len(result.get('transactions', []))} transactions")
             print(f"   ✓ Tokens: {input_tokens:,} input, {output_tokens:,} output")
@@ -325,7 +333,7 @@ IMPORTANT:
         return "\n".join(text_parts)
 
     def _extract_excel_content(self, file_content: BinaryIO) -> str:
-        """Extract text from Excel file"""
+        """Extract text from Excel file (tab-delimited format)"""
         workbook = openpyxl.load_workbook(file_content, data_only=True)
         text_parts = []
 
@@ -340,6 +348,41 @@ IMPORTANT:
                     text_parts.append(row_text)
 
         return "\n".join(text_parts)
+
+    def _convert_excel_to_csv(self, file_content: BinaryIO) -> str:
+        """
+        Convert Excel file to proper CSV format (comma-delimited).
+
+        This is used as a retry mechanism when tab-delimited format fails.
+        CSV format is more standard and works better with the format spec approach.
+
+        Args:
+            file_content: Excel file binary content
+
+        Returns:
+            CSV-formatted string
+        """
+        workbook = openpyxl.load_workbook(file_content, data_only=True)
+        csv_parts = []
+
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+            csv_parts.append(f"=== Sheet: {sheet_name} ===")
+
+            # Use CSV writer for proper escaping and formatting
+            output = io.StringIO()
+            writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+
+            for row in sheet.iter_rows(values_only=True):
+                # Convert None to empty string, everything else to string
+                row_values = [str(cell) if cell is not None else "" for cell in row]
+                # Skip completely empty rows
+                if any(val.strip() for val in row_values):
+                    writer.writerow(row_values)
+
+            csv_parts.append(output.getvalue().strip())
+
+        return "\n".join(csv_parts)
 
     def _chunk_text_by_lines(self, text_content: str, lines_per_chunk: int = 100) -> List[str]:
         """
@@ -376,7 +419,8 @@ IMPORTANT:
         self,
         text_content: str,
         account_number: Optional[str] = None,
-        file_type: str = "csv"
+        file_type: str = "csv",
+        file_content: Optional[BinaryIO] = None
     ) -> Dict[str, Any]:
         """
         Parse text content using appropriate method based on file type.
@@ -388,6 +432,7 @@ IMPORTANT:
             text_content: The text extracted from the document
             account_number: Optional account number
             file_type: Type of file (csv, pdf, excel)
+            file_content: Optional binary file content (needed for Excel CSV retry)
 
         Returns:
             Dict with transactions and metadata
@@ -414,6 +459,9 @@ IMPORTANT:
 
         # CSV/Excel files use two-step approach
         print(f"📄 Processing {file_type.upper()} file with {total_lines} lines using two-step approach...")
+
+        # Store line count in metadata for analytics
+        file_line_count = total_lines
 
         # Step 1: Extract format specification from first 50 lines
         print("   Step 1: Analyzing file format with AI...")
@@ -474,7 +522,57 @@ IMPORTANT:
         # instead of tabular data. Fall back to AI-based extraction.
         if len(result['transactions']) == 0:
             print("   ⚠️  No transactions found - format spec may be incorrect")
-            print("   Falling back to AI-based extraction (better for PDFs)...")
+
+            # For Excel files, try converting to CSV first before falling back to AI
+            if file_type == "excel" and file_content is not None:
+                print("   Trying CSV conversion as intermediate step...")
+                try:
+                    # Reset file pointer to beginning
+                    file_content.seek(0)
+                    csv_content = self._convert_excel_to_csv(file_content)
+                    csv_lines = csv_content.split('\n')
+
+                    print(f"   Step 1: Analyzing CSV format with AI...")
+                    first_csv_lines = '\n'.join(csv_lines[:50])
+                    csv_format_spec = self._extract_format_specification(first_csv_lines)
+                    print(f"   ✓ CSV Format detected: {csv_format_spec['format']['delimiter']}-delimited")
+
+                    print("   Step 2: Parsing CSV with Python...")
+                    csv_result = self._parse_with_format_spec(csv_content, csv_format_spec)
+                    print(f"   ✓ Parsed {len(csv_result['transactions'])} transactions from CSV")
+
+                    if len(csv_result['transactions']) > 0:
+                        # CSV conversion succeeded!
+                        print("   ✅ CSV conversion successful - using CSV result")
+
+                        # Add metadata about the conversion process
+                        if 'metadata' not in csv_result:
+                            csv_result['metadata'] = {}
+
+                        # Store both format specs for debugging
+                        csv_result['metadata']['format_specification'] = safe_format_spec  # Original tab-delimited
+                        csv_result['metadata']['csv_format_specification'] = {
+                            k: v for k, v in csv_format_spec.items()
+                            if k not in ('_token_usage', 'metadata')
+                        }
+                        csv_result['metadata']['parsing_method'] = "format_spec_csv_retry"
+                        csv_result['metadata']['file_line_count'] = file_line_count
+
+                        # Accumulate token usage from both format detection attempts
+                        if '_token_usage' in format_spec:
+                            format_input = format_spec['_token_usage'].get('input_tokens', 0)
+                            format_output = format_spec['_token_usage'].get('output_tokens', 0)
+                            csv_result['metadata']['input_tokens'] = csv_result['metadata'].get('input_tokens', 0) + format_input
+                            csv_result['metadata']['output_tokens'] = csv_result['metadata'].get('output_tokens', 0) + format_output
+
+                        return csv_result
+                    else:
+                        print("   ⚠️  CSV conversion also found 0 transactions")
+
+                except Exception as e:
+                    print(f"   ⚠️  CSV conversion failed: {e}")
+
+            print("   Falling back to AI-based extraction...")
 
             # Preserve the failed format spec for debugging
             failed_format_spec = safe_format_spec.copy()
@@ -493,6 +591,7 @@ IMPORTANT:
                 fallback_result['metadata'] = {}
             fallback_result['metadata']['failed_format_specification'] = failed_format_spec
             fallback_result['metadata']['parsing_method'] = parsing_method
+            fallback_result['metadata']['file_line_count'] = file_line_count
 
             # Preserve token usage from format detection step
             if '_token_usage' in format_spec:
@@ -506,6 +605,7 @@ IMPORTANT:
 
         # Format spec succeeded
         result['metadata']['parsing_method'] = "format_spec_python"
+        result['metadata']['file_line_count'] = file_line_count
         return result
 
     def _parse_large_file_in_chunks(
