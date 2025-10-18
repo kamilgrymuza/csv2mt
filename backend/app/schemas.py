@@ -94,6 +94,7 @@ class ConversionUsageCreate(BaseModel):
     error_code: Optional[str] = None
     error_message: Optional[str] = None
     format_specification: Optional[str] = None
+    parsing_method: Optional[str] = None
 
 
 class ConversionUsage(ConversionUsageCreate):

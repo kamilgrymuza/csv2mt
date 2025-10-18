@@ -82,6 +82,10 @@ class ConversionUsage(Base):
     # This stores the JSON format spec produced by Claude for debugging
     format_specification = Column(Text, nullable=True)  # JSON string
 
+    # Parsing method tracking (which route the file took)
+    # e.g., "format_spec_python", "format_spec_fallback_ai", "pdf_vision", "ai_chunked", "ai_single"
+    parsing_method = Column(String, nullable=True)
+
     # Usage tracking
     conversion_date = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 

@@ -297,11 +297,12 @@ IMPORTANT:
         try:
             result = self._parse_pipe_delimited_response(response_text)
 
-            # Add token usage to metadata
+            # Add token usage and parsing method to metadata
             if "metadata" not in result:
                 result["metadata"] = {}
             result["metadata"]["input_tokens"] = input_tokens
             result["metadata"]["output_tokens"] = output_tokens
+            result["metadata"]["parsing_method"] = "pdf_vision"
 
             print(f"   ✓ Extracted {len(result.get('transactions', []))} transactions")
             print(f"   ✓ Tokens: {input_tokens:,} input, {output_tokens:,} output")
@@ -394,12 +395,22 @@ IMPORTANT:
         lines = text_content.split('\n')
         total_lines = len(lines)
 
-        # PDFs need AI-based extraction (multi-line transaction formats)
+        # PDFs shouldn't reach here - they use _parse_pdf_with_vision directly
+        # But keep this as fallback in case text extraction is used
         if file_type == "pdf":
-            print(f"📄 Processing PDF with {total_lines} lines using AI extraction...")
+            print(f"📄 Processing PDF with {total_lines} lines using AI extraction (text fallback)...")
             if total_lines > 120:
-                return self._parse_large_file_in_chunks(text_content, account_number)
-            return self._parse_single_chunk(text_content, account_number)
+                result = self._parse_large_file_in_chunks(text_content, account_number)
+                if 'metadata' not in result:
+                    result['metadata'] = {}
+                result['metadata']['parsing_method'] = "pdf_text_chunked"
+                return result
+            else:
+                result = self._parse_single_chunk(text_content, account_number)
+                if 'metadata' not in result:
+                    result['metadata'] = {}
+                result['metadata']['parsing_method'] = "pdf_text_single"
+                return result
 
         # CSV/Excel files use two-step approach
         print(f"📄 Processing {file_type.upper()} file with {total_lines} lines using two-step approach...")
@@ -417,8 +428,17 @@ IMPORTANT:
             print("   Falling back to old chunking method...")
             # Fallback to old method if format extraction fails
             if total_lines > 120:
-                return self._parse_large_file_in_chunks(text_content, account_number)
-            return self._parse_single_chunk(text_content, account_number)
+                result = self._parse_large_file_in_chunks(text_content, account_number)
+                if 'metadata' not in result:
+                    result['metadata'] = {}
+                result['metadata']['parsing_method'] = "format_detect_failed_chunked"
+                return result
+            else:
+                result = self._parse_single_chunk(text_content, account_number)
+                if 'metadata' not in result:
+                    result['metadata'] = {}
+                result['metadata']['parsing_method'] = "format_detect_failed_single"
+                return result
 
         # Step 2: Parse full file with Python using format specification
         print("   Step 2: Parsing all transactions with Python...")
@@ -434,11 +454,20 @@ IMPORTANT:
             result['metadata']['output_tokens'] = format_spec['_token_usage']['output_tokens']
             print(f"   ✓ Tokens: {format_spec['_token_usage']['input_tokens']:,} input, {format_spec['_token_usage']['output_tokens']:,} output")
 
-        # Store format specification for debugging (remove token usage metadata first)
+        # Store format specification for debugging
+        # Note: Don't store the metadata key from format_spec to avoid circular reference
+        # since we're storing the format_spec inside result['metadata']
         if 'metadata' not in result:
             result['metadata'] = {}
-        format_spec_copy = {k: v for k, v in format_spec.items() if k != '_token_usage'}
-        result['metadata']['format_specification'] = format_spec_copy
+
+        safe_format_spec = {}
+        for key, value in format_spec.items():
+            # Skip _token_usage (already stored separately) and metadata (would cause circular ref)
+            if key in ('_token_usage', 'metadata'):
+                continue
+            safe_format_spec[key] = value
+
+        result['metadata']['format_specification'] = safe_format_spec
 
         # If we got very few or zero transactions, the format spec might be wrong
         # This can happen with PDFs where text extraction creates multi-line entries
@@ -446,10 +475,37 @@ IMPORTANT:
         if len(result['transactions']) == 0:
             print("   ⚠️  No transactions found - format spec may be incorrect")
             print("   Falling back to AI-based extraction (better for PDFs)...")
-            if total_lines > 120:
-                return self._parse_large_file_in_chunks(text_content, account_number)
-            return self._parse_single_chunk(text_content, account_number)
 
+            # Preserve the failed format spec for debugging
+            failed_format_spec = safe_format_spec.copy()
+            failed_format_spec['_fallback_reason'] = 'No transactions found with format spec'
+
+            # Get result from AI extraction
+            if total_lines > 120:
+                fallback_result = self._parse_large_file_in_chunks(text_content, account_number)
+                parsing_method = "format_spec_fallback_chunked"
+            else:
+                fallback_result = self._parse_single_chunk(text_content, account_number)
+                parsing_method = "format_spec_fallback_single"
+
+            # Add the failed format spec to metadata for debugging
+            if 'metadata' not in fallback_result:
+                fallback_result['metadata'] = {}
+            fallback_result['metadata']['failed_format_specification'] = failed_format_spec
+            fallback_result['metadata']['parsing_method'] = parsing_method
+
+            # Preserve token usage from format detection step
+            if '_token_usage' in format_spec:
+                # Add format detection tokens to the AI extraction tokens
+                format_input = format_spec['_token_usage'].get('input_tokens', 0)
+                format_output = format_spec['_token_usage'].get('output_tokens', 0)
+                fallback_result['metadata']['input_tokens'] = fallback_result['metadata'].get('input_tokens', 0) + format_input
+                fallback_result['metadata']['output_tokens'] = fallback_result['metadata'].get('output_tokens', 0) + format_output
+
+            return fallback_result
+
+        # Format spec succeeded
+        result['metadata']['parsing_method'] = "format_spec_python"
         return result
 
     def _parse_large_file_in_chunks(

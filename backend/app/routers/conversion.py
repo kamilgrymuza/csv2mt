@@ -129,12 +129,18 @@ async def auto_convert_document(
         # Extract format specification for debugging (if available in metadata)
         metadata = parsed_data.get("metadata", {})
         format_spec_json = None
-        if metadata.get("format_specification"):
+
+        # Try to get format_specification (successful) or failed_format_specification (fell back to AI)
+        format_spec = metadata.get("format_specification") or metadata.get("failed_format_specification")
+
+        if format_spec:
             import json
             try:
-                format_spec_json = json.dumps(metadata["format_specification"])
-            except (TypeError, ValueError):
-                logger.warning("Failed to serialize format specification for file %s", file.filename)
+                format_spec_json = json.dumps(format_spec)
+                spec_type = "format_specification" if "format_specification" in metadata else "failed_format_specification"
+                logger.info("%s stored for file %s (%d chars)", spec_type, file.filename, len(format_spec_json))
+            except (TypeError, ValueError) as e:
+                logger.warning("Failed to serialize format specification for file %s: %s", file.filename, e)
 
         # Track conversion usage AFTER parsing succeeds (even if MT940 conversion fails)
         # This ensures empty/invalid statements count towards usage since parsing consumed AI tokens
@@ -144,11 +150,12 @@ async def auto_convert_document(
             bank_name="auto-detected",
             input_tokens=metadata.get("input_tokens"),
             output_tokens=metadata.get("output_tokens"),
-            format_specification=format_spec_json
+            format_specification=format_spec_json,
+            parsing_method=metadata.get("parsing_method")
         )
         usage_record = crud.create_conversion_usage(db, usage)
-        logger.info("Auto-conversion tracked for user %s (input: %s, output: %s)",
-                   current_user.id, usage.input_tokens, usage.output_tokens)
+        logger.info("Auto-conversion tracked for user %s (input: %s, output: %s, method: %s)",
+                   current_user.id, usage.input_tokens, usage.output_tokens, usage.parsing_method)
 
         # Convert to MT940
         logger.info("Converting to MT940 format")
