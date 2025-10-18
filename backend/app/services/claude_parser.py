@@ -63,14 +63,17 @@ class Transaction:
 class ClaudeDocumentParser:
     """Service for parsing documents using AI (Claude or OpenAI)"""
 
-    def __init__(self, model: Optional[str] = None):
+    def __init__(self, model: Optional[str] = None, disable_cache: bool = False):
         """Initialize parser with specified AI model
 
         Args:
             model: AI model to use (claude-sonnet, claude-haiku, gpt-4o)
                    If None, uses settings.ai_model
+            disable_cache: If True, adds unique identifier to break AI response caching
+                          Useful for testing to ensure fresh responses
         """
         self.model = model or settings.ai_model
+        self.disable_cache = disable_cache
 
         if self.model.startswith("claude"):
             if not settings.anthropic_api_key:
@@ -589,27 +592,38 @@ IMPORTANT:
   If only one combined description column exists, use the simple description field.
   When in doubt, prefer description_parts if you see any separation of counterparty vs purpose.
 
-CRITICAL - Finding transaction_start_row (MOST IMPORTANT):
-Transaction data forms a CONTINUOUS BLOCK with consistent structure. To find where it starts:
-1. Scan through the file looking for rows that contain transaction dates in the first data column
-2. Transaction dates look like: "2025-07-18", "2025-06-13", "2024-10-06", etc.
-3. The row IMMEDIATELY BEFORE the first transaction typically has:
-   - A header row starting with "#" (like "#Data operacji;#Opis operacji;...")
-   - OR column names (like "Date;Description;Amount")
-   - OR a blank line
-4. Find the VERY FIRST row that has a date in the transaction date column - that's transaction_start_row
-5. CRITICAL: Do NOT skip rows even if multiple consecutive rows have the same date
-   Example: If you see:
-   - Row 25: "#Data operacji;#Opis operacji;..."  (header with #)
-   - Row 26: "2025-07-18;KAMIL GRYMUZA..."        (FIRST transaction)
-   - Row 27: "2025-07-18;KAMIL GRYMUZA..."        (second transaction, same date)
-   - Row 28: "2025-06-13;KAMIL GRYMUZA..."        (third transaction, different date)
-   Then transaction_start_row = 26 (NOT 27, even though both 26 and 27 have the same date!)
-6. The rule: transaction_start_row = first row with a date that comes AFTER a non-date row (header/blank)
-7. VERIFY YOUR ANSWER: After determining transaction_start_row, check that:
-   - The row before it does NOT start with a date
-   - The row you selected DOES start with a date
-   - You are not skipping any date rows - include ALL transactions from the first date onwards
+CRITICAL - Finding transaction_start_row (MOST IMPORTANT - READ CAREFULLY):
+
+Step-by-step algorithm to find the correct transaction_start_row:
+
+STEP 1: Scan the file from top to bottom, looking at the FIRST column of each row
+STEP 2: Find the FIRST row where the first column contains a DATE pattern (YYYY-MM-DD or similar)
+STEP 3: Verify the row BEFORE that row does NOT contain a date (it should be a header like "#Data operacji" or blank)
+STEP 4: That row number (0-based) is your transaction_start_row
+
+COMMON MISTAKE TO AVOID:
+- DO NOT skip the first date row just because the next row has the same date!
+- DO NOT look for "date changes" - the FIRST date row is what counts!
+- Multiple consecutive rows can have the SAME date - this is normal for same-day transactions
+
+CONCRETE EXAMPLE (this is the EXACT pattern you'll see in mBank files):
+Row 24: "PLN;301 132,84;-321 430,40;"          <- NO date in first column
+Row 25: "#Data operacji;#Opis operacji;..."    <- NO date, this is a header (has # prefix)
+Row 26: "2025-07-18;KAMIL GRYMUZA..."          <- ✓ FIRST DATE! Answer = 26
+Row 27: "2025-07-18;KAMIL GRYMUZA..."          <- Same date, but DON'T start here
+Row 28: "2025-06-13;..."                        <- Different date, but DON'T start here
+
+Correct answer: transaction_start_row = 26
+
+WRONG ANSWERS AND WHY:
+- transaction_start_row = 27: WRONG! You skipped row 26 which has a valid transaction
+- transaction_start_row = 28: WRONG! You skipped rows 26 and 27 which have valid transactions
+
+VERIFICATION CHECKLIST (use this to verify your answer before responding):
+✓ Row [transaction_start_row - 1] does NOT start with a date pattern (should be header or blank)
+✓ Row [transaction_start_row] DOES start with a date pattern (YYYY-MM-DD)
+✓ There is NO earlier row with a date in the first column
+✓ You are including ALL transactions from this point forward (not skipping any date rows)
 
 Sample file content:
 
@@ -618,10 +632,19 @@ Sample file content:
         # Call AI model to extract format
         if self.client:  # Claude
             model_name = "claude-sonnet-4-5-20250929" if self.model == "claude-sonnet" else "claude-3-5-haiku-20241022"
+
+            # Optionally add timestamp to break caching (for testing)
+            content = prompt + first_lines
+            if self.disable_cache:
+                import time
+                cache_breaker = f"\n\n<!-- Analysis timestamp: {time.time()} -->\n"
+                content = prompt + cache_breaker + first_lines
+
             response = self.client.messages.create(
                 model=model_name,
                 max_tokens=2048,
-                messages=[{"role": "user", "content": prompt + first_lines}]
+                temperature=0.0,  # Use deterministic mode for consistent results
+                messages=[{"role": "user", "content": content}]
             )
             response_text = response.content[0].text
             input_tokens = response.usage.input_tokens
