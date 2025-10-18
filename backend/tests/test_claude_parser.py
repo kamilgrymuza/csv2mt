@@ -61,6 +61,8 @@ class TestMT940FormatValidation:
             "transactions": [],
             "metadata": {
                 "account_number": "123456789",
+                "statement_start_date": "2024-01-01",
+                "statement_end_date": "2024-01-31",
                 "opening_balance": 0.0,
                 "closing_balance": 0.0
             }
@@ -82,6 +84,8 @@ class TestMT940FormatValidation:
             "transactions": [],
             "metadata": {
                 "account_number": "DE89370400440532013000",
+                "statement_start_date": "2024-01-01",
+                "statement_end_date": "2024-01-31",
                 "opening_balance": 0.0,
                 "closing_balance": 0.0
             }
@@ -103,6 +107,7 @@ class TestMT940FormatValidation:
             "metadata": {
                 "account_number": "123456789",
                 "statement_start_date": "2024-01-15",
+                "statement_end_date": "2024-01-31",  # Added missing end date
                 "opening_balance": 1234.56,
                 "closing_balance": 1234.56
             }
@@ -155,6 +160,7 @@ class TestMT940FormatValidation:
             "transactions": [],
             "metadata": {
                 "account_number": "123456789",
+                "statement_start_date": "2024-01-01",  # Added missing start date
                 "statement_end_date": "2024-01-31",
                 "opening_balance": 1000.00,
                 "closing_balance": 1234.56
@@ -517,6 +523,8 @@ class TestEdgeCases:
             "transactions": [],
             "metadata": {
                 "account_number": None,
+                "statement_start_date": "2024-01-01",
+                "statement_end_date": "2024-01-31",
                 "opening_balance": 0.0,
                 "closing_balance": 0.0
             }
@@ -535,6 +543,8 @@ class TestEdgeCases:
             "transactions": [],
             "metadata": {
                 "account_number": "111111111",
+                "statement_start_date": "2024-01-01",
+                "statement_end_date": "2024-01-31",
                 "opening_balance": 0.0,
                 "closing_balance": 0.0
             }

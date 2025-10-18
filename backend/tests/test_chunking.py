@@ -478,14 +478,20 @@ TXN,2024-01-17,-50.00,"Another valid",DEBIT,REF3,750.00"""
         assert result["transactions"][0]["date"] == "2024-01-15"
         assert result["transactions"][1]["date"] == "2024-01-17"
 
-    def test_parse_requires_at_least_one_transaction(self):
-        """Test that parsing fails if no transactions found"""
+    def test_parse_allows_statements_without_transactions(self):
+        """Test that parsing allows statements with no transactions (empty statements are valid)"""
         parser = ClaudeDocumentParser()
 
-        response = """METADATA,123,PLN,2024-01-01,2024-01-31,1000.00,500.00"""
+        response = """METADATA,123,PLN,2024-01-01,2024-01-31,1000.00,1000.00"""
 
-        with pytest.raises(ValueError, match="No transactions found"):
-            parser._parse_pipe_delimited_response(response)
+        # Empty statements are valid as long as metadata is present
+        result = parser._parse_pipe_delimited_response(response)
+
+        assert len(result["transactions"]) == 0
+        assert result["metadata"]["account_number"] == "123"
+        assert result["metadata"]["currency"] == "PLN"
+        assert result["metadata"]["opening_balance"] == 1000.00
+        assert result["metadata"]["closing_balance"] == 1000.00
 
     def test_parse_handles_special_chars_in_quoted_description(self):
         """Test parsing when description contains special characters (pipes, commas)
