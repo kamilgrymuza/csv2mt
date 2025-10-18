@@ -215,23 +215,33 @@ Field details:
 - reference: transaction reference number (empty if not available)
 - balance: account balance after transaction (empty if not available)
 
-CRITICAL - Description Field Extraction Rules:
-1. Extract the COMPLETE, FULL text from counterparty and title/description cells
+CRITICAL - Description Field Extraction Rules (EXACT CHARACTER-BY-CHARACTER COPYING):
+1. Extract the COMPLETE, FULL text EXACTLY as it appears - character-by-character
 2. Include ALL text visible in the cells - do NOT summarize, abbreviate, or omit any parts
-3. If a table has separate columns for:
-   - Counterparty/payee (who): Extract the ENTIRE cell content
-   - Title/description (what): Extract the ENTIRE cell content
+3. PRESERVE EXACT FORMATTING including:
+   - Leading and trailing spaces (but normalize to single space after combining)
+   - Slashes, hyphens, and all punctuation EXACTLY as shown in PDF
+   - Special characters like "/", "-", ",", ".", etc. in their EXACT positions
+4. If a table has separate columns for:
+   - Counterparty/payee (who): Extract the ENTIRE cell content EXACTLY
+   - Title/description (what): Extract the ENTIRE cell content EXACTLY
    - Combine them as: "counterparty - title" (with space-dash-space separator)
-4. ONLY remove 26-digit bank account numbers (IBAN-like numbers) from the description
-5. KEEP all other information including:
-   - NIP/tax ID numbers
-   - Invoice numbers
-   - Reference codes
+5. ONLY remove 26-digit bank account numbers (IBAN-like numbers) from the description
+6. KEEP all other information EXACTLY as shown:
+   - NIP/tax ID numbers - preserve EXACTLY: "/NIP/" or "NIP/" as shown
+   - Invoice numbers - preserve EXACTLY
+   - Reference codes - preserve EXACTLY with all slashes: "/TI/", "/OKR/", etc.
    - ALL other details visible in the cells
-6. Be CONSISTENT - extract the same level of detail for every transaction
+7. PAY SPECIAL ATTENTION to slashes before codes like NIP, TI, OKR:
+   - If PDF shows "/NIP/123", write "/NIP/123" (with leading slash)
+   - If PDF shows "NIP/123", write "NIP/123" (without leading slash)
+   - Copy EXACTLY what you see - do not add or remove slashes
+8. Be DETERMINISTIC - extract EXACTLY the same characters every time you process the same PDF
 
-Examples of correct extraction:
-- "Pomorska Fundacja Filmowa w Gdyni - NIP/5862147548/FAKTURA PROFORMA 128/2025" ✓
+Examples of EXACT extraction (note: copy every character including slashes exactly as shown):
+- If PDF shows: "... - /NIP/5862147548/..." → write: "... - /NIP/5862147548/..." ✓
+- If PDF shows: "... - NIP/5862147548/..." → write: "... - NIP/5862147548/..." ✓
+- If PDF shows: "... - /TI/N123/OKR/0/..." → write: "... - /TI/N123/OKR/0/..." ✓
 - "PROWIZJE I OPŁATY-POZOSTAŁE I/616 - opł. za opinię bankową" ✓
 - "Adam Cioczek - 1 rata wynagrodzenia za przeniesienie praw do treatmentu filmu Przejście z godnie z rachunkiem z dnia 12.09.2025" ✓
 
@@ -248,6 +258,7 @@ IMPORTANT:
             response = self.client.messages.create(
                 model=model_name,
                 max_tokens=8192,
+                temperature=0.0,  # Use deterministic mode for consistent results
                 messages=[{
                     "role": "user",
                     "content": [
